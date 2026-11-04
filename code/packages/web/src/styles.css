@@ -317,3 +317,54 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
     opacity: 0;
   }
 }
+
+/* Title colours: the colour of the title on screen, set on the root by
+   lib/title-accent.ts, tints the play buttons, progress and a few glows. */
+@property --title-accent {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: rgb(255 255 255);
+}
+:root[data-title-colours] {
+  transition: --title-accent 800ms ease;
+}
+:root[data-title-accent]
+  :is([data-ui='hero-action'], [data-ui='item-action'])[data-name='play'] {
+  background-color: var(--title-accent);
+  border-color: transparent;
+  color: rgb(10 10 10);
+  box-shadow: 0 10px 30px -12px
+    color-mix(in srgb, var(--title-accent) 75%, transparent);
+}
+:root[data-title-accent]
+  :is(
+    [data-ui='hero-action'],
+    [data-ui='item-action']
+  )[data-name='play']:hover {
+  filter: brightness(1.08);
+}
+:root[data-title-accent]
+  :is([data-ui='progress-bar-fill'], [data-ui='seek-bar-progress']) {
+  background-color: var(--title-accent);
+}
+:root[data-title-accent] :is([data-ui='hero-logo'], [data-ui='item-logo']) {
+  filter: drop-shadow(
+    0 0 26px color-mix(in srgb, var(--title-accent) 38%, transparent)
+  );
+}
+:root[data-title-accent] [data-ui='hero-shade'][data-name='bottom']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 55% 85% at 12% 100%,
+    color-mix(in srgb, var(--title-accent) 16%, transparent),
+    transparent 70%
+  );
+}
+:root[data-title-colours] [data-ui='card-preview'][data-accent] {
+  box-shadow:
+    0 24px 48px -12px rgb(0 0 0 / 0.85),
+    0 0 0 1px color-mix(in srgb, var(--title-accent) 45%, transparent),
+    0 0 32px -6px color-mix(in srgb, var(--title-accent) 45%, transparent);
+}

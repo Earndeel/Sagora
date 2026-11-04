@@ -5222,3 +5222,31 @@ msgstr "Votre note"
 #: src/pages/settings/cache.tsx
 msgid "Your watch history and totals."
 msgstr "Votre historique de visionnage et totaux."
+
+#: src/components/teaser.tsx
+msgid "Turn the sound on"
+msgstr "Activer le son"
+
+#: src/components/teaser.tsx
+msgid "Turn the sound off"
+msgstr "Couper le son"
+
+#: src/pages/settings/interface.tsx
+msgid "Trailers and colours"
+msgstr "Bandes-annonces et couleurs"
+
+#: src/pages/settings/interface.tsx
+msgid "Automatic teasers"
+msgstr "Teasers automatiques"
+
+#: src/pages/settings/interface.tsx
+msgid "After a moment, a title's trailer plays muted in the hero and in a card's preview, one at a time. Devices set to reduce motion or save data never play them."
+msgstr "Après un court instant, la bande-annonce du titre se lance sans le son dans le bandeau et dans l'aperçu d'une carte, une seule à la fois. Jamais sur un appareil réglé pour réduire les animations ou économiser les données."
+
+#: src/pages/settings/interface.tsx
+msgid "Title colours"
+msgstr "Couleurs du titre"
+
+#: src/pages/settings/interface.tsx
+msgid "Play buttons, progress bars and a few glows take a colour from the artwork of the title on screen. Off, they keep the theme's colours."
+msgstr "Les boutons Lecture, les barres de progression et quelques halos prennent une couleur tirée de l'affiche du titre à l'écran. Désactivé, ils gardent les couleurs du thème."

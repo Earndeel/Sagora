@@ -5392,3 +5392,31 @@ msgstr "Your rating"
 #: src/pages/settings/cache.tsx
 msgid "Your watch history and totals."
 msgstr "Your watch history and totals."
+
+#: src/components/teaser.tsx
+msgid "Turn the sound on"
+msgstr "Turn the sound on"
+
+#: src/components/teaser.tsx
+msgid "Turn the sound off"
+msgstr "Turn the sound off"
+
+#: src/pages/settings/interface.tsx
+msgid "Trailers and colours"
+msgstr "Trailers and colours"
+
+#: src/pages/settings/interface.tsx
+msgid "Automatic teasers"
+msgstr "Automatic teasers"
+
+#: src/pages/settings/interface.tsx
+msgid "After a moment, a title's trailer plays muted in the hero and in a card's preview, one at a time. Devices set to reduce motion or save data never play them."
+msgstr "After a moment, a title's trailer plays muted in the hero and in a card's preview, one at a time. Devices set to reduce motion or save data never play them."
+
+#: src/pages/settings/interface.tsx
+msgid "Title colours"
+msgstr "Title colours"
+
+#: src/pages/settings/interface.tsx
+msgid "Play buttons, progress bars and a few glows take a colour from the artwork of the title on screen. Off, they keep the theme's colours."
+msgstr "Play buttons, progress bars and a few glows take a colour from the artwork of the title on screen. Off, they keep the theme's colours."

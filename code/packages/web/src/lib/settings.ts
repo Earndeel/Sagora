@@ -725,6 +725,13 @@ export const settings = {
       'aiostreams-web-interface-card-previews',
       true
     ),
+    /** Trailers playing muted in the hero and in a card's preview. */
+    teasers: device<boolean>('aiostreams-web-interface-teasers', true),
+    /** Buttons and accents tinted with the colours of the title on screen. */
+    titleColours: device<boolean>(
+      'aiostreams-web-interface-title-colours',
+      true
+    ),
     /** Where a touch screen wide enough for the sidebar keeps the navigation. */
     touchNavigation: device<TouchNavigation>(
       'aiostreams-web-interface-touch-navigation',

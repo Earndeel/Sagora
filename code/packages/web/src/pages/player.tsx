@@ -99,6 +99,7 @@ import { PartyLayer } from '../components/party/party-layer';
 import { useRemotePlayer } from '../components/remote-target';
 import { indexForTrack } from '../lib/remote/tracks';
 import { useLatest } from '../lib/use-latest';
+import { useTitleAccent } from '../lib/title-accent';
 import { openPartySheet } from '../components/party/party-sheet';
 import { usePlaylistEdits, usePlaylistName } from '../lib/playlists';
 
@@ -168,6 +169,7 @@ export function PlayerPage({
       : undefined;
   const fetched = useItem(itemId);
   const item = { ...fetched, data: fetched.data ?? local?.item };
+  useTitleAccent(item.data);
   const listed = usePlaybackInfo(itemId, { enabled: !local && !sourceId });
   const named = sourceId || playableSources(listed.data)[0]?.Id || undefined;
   const info = usePlaybackInfo(itemId, {

@@ -108,6 +108,7 @@ import { trailersOf } from '../lib/playback/trailers';
 import { openPartySheet } from '../components/party/party-sheet';
 import { openRemote } from '../components/remote-sheet';
 import { openRandom } from '../components/random-pick';
+import { useTitleAccent } from '../lib/title-accent';
 import { useParty } from '../lib/party/party';
 import {
   DownloadButton,
@@ -132,6 +133,7 @@ export function ItemPage({
   const { client } = useSession();
   const item = useItem(itemId, { page: true });
   const data = item.data;
+  useTitleAccent(data);
   useShowAhead(itemId, data?.Type === 'Series', seasonId);
   const [season, setSeason] = React.useState<BaseItemDto>();
   useExternalReturn();

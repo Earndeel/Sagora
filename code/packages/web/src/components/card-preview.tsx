@@ -18,10 +18,15 @@ import {
 import { Artwork, ProgressBar } from './cards';
 import { CachedImage } from './cached-image';
 import { Scores, scoresOf } from './scores';
+import { Teaser, TeaserSoundButton } from './teaser';
+import { accentOf } from '../lib/title-accent';
+import { settings, useSetting } from '../lib/settings';
 import type { BaseItemDto } from '../lib/types';
 
 const POINTER_REST_MS = 500;
 const FOCUS_REST_MS = 800;
+/** How long an open preview shows its artwork before its teaser starts. */
+const TEASER_MS = 900;
 // A collection's card already shows all it has.
 const previewed = ({ Type }: BaseItemDto) =>
   Type === 'Movie' || Type === 'Series' || Type === 'Episode';
@@ -157,15 +162,39 @@ function place(card: HTMLElement) {
   return { left, top, width };
 }
 
+/** The preview's own glow, in its title's colour. */
+function usePreviewAccent(item: BaseItemDto) {
+  const { client } = useSession();
+  const [enabled] = useSetting(settings.interface.titleColours);
+  const src = enabled
+    ? (backdropUrls(client, item, { maxWidth: 320 })[0] ?? null)
+    : null;
+  const [colour, setColour] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    let current = true;
+    if (src) void accentOf(src).then((c) => current && setColour(c));
+    return () => {
+      current = false;
+    };
+  }, [src]);
+  return src ? colour : null;
+}
+
 function Preview({ target, onClose }: { target: Target; onClose(): void }) {
   const [at] = React.useState(() => place(target.card));
   const tv = !!currentHost().tv;
+  const accent = usePreviewAccent(target.item);
   return (
     <div
       aria-hidden
       data-ui="card-preview"
       data-type={target.item.Type}
-      style={at}
+      data-accent={accent ? '' : undefined}
+      style={
+        accent
+          ? ({ ...at, '--title-accent': accent } as React.CSSProperties)
+          : at
+      }
       className={cn(
         'fixed z-30 cursor-pointer overflow-hidden rounded-xl bg-gray-900 shadow-[0_24px_48px_-12px_rgb(0_0_0/0.85)] ring-1 ring-white/10',
         'duration-200 ease-out animate-in fade-in-0 zoom-in-90 motion-reduce:animate-none',
@@ -191,6 +220,12 @@ function Preview({ target, onClose }: { target: Target; onClose(): void }) {
       }}
     >
       <PreviewBody listed={target.item} />
+      {!tv && (
+        <TeaserSoundButton
+          teaserKey="card"
+          className="absolute end-2 top-2 size-8 text-base"
+        />
+      )}
     </div>
   );
 }
@@ -231,6 +266,14 @@ function PreviewBody({ listed }: { listed: BaseItemDto }) {
           })
         }
         alt=""
+      />
+      <Teaser
+        key={listed.Id}
+        item={item}
+        teaserKey="card"
+        active
+        delayMs={TEASER_MS}
+        priority={1}
       />
       {/* Past the box's clip: at a fractional size the shade can stop a row short. */}
       <div className="absolute -inset-px bg-gradient-to-t from-black/95 via-black/55 to-black/0" />

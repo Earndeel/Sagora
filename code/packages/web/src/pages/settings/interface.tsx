@@ -245,6 +245,10 @@ export function InterfaceSection() {
   const [cardPreviews, setCardPreviews] = useSetting(
     settings.interface.cardPreviews
   );
+  const [teasers, setTeasers] = useSetting(settings.interface.teasers);
+  const [titleColours, setTitleColours] = useSetting(
+    settings.interface.titleColours
+  );
   const touch = !currentHost().tv && matchMedia('(pointer: coarse)').matches;
 
   const option = (value: string, label: string) => ({
@@ -373,6 +377,26 @@ export function InterfaceSection() {
           />
         </SettingsCard>
       )}
+      <SettingsCard
+        name="title-motion"
+        title={t`Trailers and colours`}
+        description={onDevice()}
+      >
+        <Switch
+          side="right"
+          label={t`Automatic teasers`}
+          help={t`After a moment, a title's trailer plays muted in the hero and in a card's preview, one at a time. Devices set to reduce motion or save data never play them.`}
+          value={teasers}
+          onValueChange={setTeasers}
+        />
+        <Switch
+          side="right"
+          label={t`Title colours`}
+          help={t`Play buttons, progress bars and a few glows take a colour from the artwork of the title on screen. Off, they keep the theme's colours.`}
+          value={titleColours}
+          onValueChange={setTitleColours}
+        />
+      </SettingsCard>
       <SettingsCard
         name="episodes"
         title={t`Episodes`}

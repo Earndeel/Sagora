@@ -25,6 +25,8 @@ import { useHold } from '../lib/use-hold';
 import { useLatest } from '../lib/use-latest';
 import { CachedImage } from './cached-image';
 import { GlideLayers } from './glide-layers';
+import { Teaser, TeaserSoundButton } from './teaser';
+import { useTitleAccent } from '../lib/title-accent';
 
 const DRAG_SLOP_PX = 8;
 const LAND_SHARE = 0.35;
@@ -32,6 +34,9 @@ const FLICK_PX_MS = 0.4;
 const SETTLE_MS = 300;
 /** How long the pointer or focus rests on a card before the hero follows it. */
 const FOLLOW_DELAY_MS = 300;
+/** How long a title's artwork shows before its teaser starts. */
+const HERO_TEASER_MS = 1800;
+const FOLLOW_TEASER_MS = 1500;
 
 function Shade() {
   return (
@@ -528,6 +533,8 @@ export function Hero({
   const [seconds] = useSetting(settings.interface.heroSeconds);
   const [paused, setPaused] = React.useState(false);
   const [dragging, setDragging] = React.useState(false);
+  // A playing teaser holds the title until it ends.
+  const [teasing, setTeasing] = React.useState(false);
   // Keys of the previous, current and next slides, passed round as a swipe
   // lands so the slide faded in stays mounted.
   const [slots, setSlots] = React.useState<[number, number, number]>([0, 1, 2]);
@@ -554,6 +561,7 @@ export function Hero({
       paused ||
       focused ||
       dragging ||
+      teasing ||
       !shown ||
       !inSight ||
       featured.length < 2
@@ -569,6 +577,7 @@ export function Hero({
     paused,
     focused,
     dragging,
+    teasing,
     shown,
     inSight,
     featured.length,
@@ -603,6 +612,7 @@ export function Hero({
     if (to && el) focusOn(el);
   }, [index]);
 
+  useTitleAccent(loading ? undefined : featured[index]);
   if (loading) return <HeroSkeleton />;
   if (!featured[index]) return null;
   // In a fixed order, so a landing never moves their nodes.
@@ -642,6 +652,16 @@ export function Hero({
           >
             <BackdropFrame className="max-w-[calc(26rem*2.6)] sm:max-w-[calc(30rem*2.6)] lg:max-w-[calc(max(36rem,53vh)*2.6)]">
               <Backdrops current={backdropSrc(client, item)} fade={!role} />
+              {!role && (
+                <Teaser
+                  key={item.Id}
+                  item={item}
+                  teaserKey="hero"
+                  active={shown && inSight && !dragging}
+                  delayMs={HERO_TEASER_MS}
+                  onPlaying={setTeasing}
+                />
+              )}
             </BackdropFrame>
           </div>
         ))}
@@ -667,6 +687,10 @@ export function Hero({
         </div>
       ))}
 
+      <TeaserSoundButton
+        teaserKey="hero"
+        className="absolute end-4 top-[calc(var(--top-bar,0px)+1rem)] z-[2] lg:end-10"
+      />
       {featured.length > 1 && (
         <div
           data-ui="hero-dots"
@@ -725,6 +749,16 @@ function FollowBackdrop({
 }) {
   const { client } = useSession();
   const src = item && backdropSrc(client, item);
+  const shown = usePageShown();
+  const teaser = item && (
+    <Teaser
+      key={item.Id}
+      item={item}
+      teaserKey="follow"
+      active={shown}
+      delayMs={FOLLOW_TEASER_MS}
+    />
+  );
 
   if (corner)
     return (
@@ -736,6 +770,7 @@ function FollowBackdrop({
       >
         <div className="absolute inset-0 [mask-image:linear-gradient(to_bottom,black_45%,rgb(0_0_0/0.4)_75%,transparent)]">
           <Backdrops current={src} />
+          {teaser}
         </div>
       </div>
     );
@@ -746,6 +781,7 @@ function FollowBackdrop({
     >
       <BackdropFrame className="max-w-[calc(100vh*2.6)]">
         <Backdrops current={src} />
+        {teaser}
       </BackdropFrame>
       <Shade />
     </div>
@@ -835,6 +871,7 @@ export function FollowHero({
     };
   }, [scroller]);
   const item = picked ?? items.find((i) => backdropSrc(client, i)) ?? items[0];
+  useTitleAccent(item);
 
   return (
     <FollowContext.Provider value={follow}>
@@ -853,8 +890,14 @@ export function FollowHero({
         <section
           data-ui="hero"
           data-follow
-          className="flex h-[var(--hero-h)] flex-none flex-col justify-end"
+          className="relative flex h-[var(--hero-h)] flex-none flex-col justify-end"
         >
+          {!currentHost().tv && (
+            <TeaserSoundButton
+              teaserKey="follow"
+              className="absolute bottom-4 end-10 z-[2]"
+            />
+          )}
           <div
             data-ui="hero-content"
             className={cn(
