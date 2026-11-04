@@ -16,6 +16,8 @@ import type { BaseItemDto } from '../lib/types';
 
 /** How long a teaser may take to start before the artwork stays. */
 const START_LIMIT_MS = 9000;
+/** Trailers tried in turn when one refuses to play here, as many do. */
+const MAX_TRIES = 3;
 const HANDSHAKE_MS = 250;
 
 /**
@@ -48,8 +50,15 @@ export function Teaser({
   const [enabled] = useSetting(settings.interface.teasers);
   const [allowed] = React.useState(teasersAllowed);
   const details = useItem(item.Id ?? '');
-  const trailer = trailersOf(details.data ?? item)[0];
+  const trailers = trailersOf(details.data ?? item);
+  const [index, setIndex] = React.useState(0);
+  const trailer = trailers[index];
   const [over, setOver] = React.useState(false);
+  // A trailer its owner keeps off other sites gives way to the next one.
+  const refused = React.useCallback(() => {
+    if (index + 1 < Math.min(trailers.length, MAX_TRIES)) setIndex(index + 1);
+    else setOver(true);
+  }, [index, trailers.length]);
   const turn = useTeaserTurn(
     teaserKey,
     enabled && allowed && active && !!trailer && !over,
@@ -59,9 +68,10 @@ export function Teaser({
   React.useEffect(() => {
     setDue(false);
     if (!turn) return;
-    const timer = setTimeout(() => setDue(true), delayMs);
+    // Only the first waits: the next ones replace one that would have shown.
+    const timer = setTimeout(() => setDue(true), index ? 0 : delayMs);
     return () => clearTimeout(timer);
-  }, [turn, delayMs, trailer?.url]);
+  }, [turn, delayMs, trailer?.url, index]);
   const playback = useTrailerPlayback(due ? trailer?.url : undefined);
   const [playing, setPlaying] = React.useState(false);
   const latest = React.useRef({ onPlaying, onEnded });
@@ -69,14 +79,18 @@ export function Teaser({
 
   const shown = turn && due && !!playback.data;
   React.useEffect(() => {
+    if (shown && playback.data?.kind === 'external') refused();
+    if (due && playback.isError) refused();
+  }, [shown, due, playback.data, playback.isError, refused]);
+  React.useEffect(() => {
     if (!shown) setPlaying(false);
   }, [shown]);
   React.useEffect(() => {
     if (!shown || playing) return;
-    // A trailer that never plays gives way to the artwork for good.
-    const timer = setTimeout(() => setOver(true), START_LIMIT_MS);
+    // A trailer that never plays gives way to the next, then to the artwork.
+    const timer = setTimeout(refused, START_LIMIT_MS);
     return () => clearTimeout(timer);
-  }, [shown, playing]);
+  }, [shown, playing, refused]);
   React.useEffect(() => {
     latest.current.onPlaying?.(playing);
     setSounding(teaserKey, playing);
@@ -98,7 +112,7 @@ export function Teaser({
       setOver(true);
       latest.current.onEnded?.();
     },
-    onFailed: () => setOver(true),
+    onFailed: refused,
   };
   return (
     <div
@@ -112,9 +126,9 @@ export function Teaser({
       )}
     >
       {found.kind === 'embed' ? (
-        <YouTubeTeaser id={found.id} {...events} />
+        <YouTubeTeaser key={found.id} id={found.id} {...events} />
       ) : (
-        <VideoTeaser url={found.url} {...events} />
+        <VideoTeaser key={found.url} url={found.url} {...events} />
       )}
     </div>
   );
