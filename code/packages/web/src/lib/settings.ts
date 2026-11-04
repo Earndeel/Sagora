@@ -803,10 +803,13 @@ export const settings = {
     serverCss: syncedFlag('serverCss', true),
   },
   playback: {
-    autoPlayFirst: syncedFlag('autoPlayFirst', false, [
+    // On by default here: Play starts the best version, as a family expects.
+    autoPlayFirst: syncedFlag('autoPlayFirst', true, [
       'aiostreams-web-skip-versions',
     ]),
     preloadVersions: syncedFlag('preloadVersions'),
+    /** A version that fails for real gives way to the next one. */
+    autoFallback: syncedFlag('autoFallback', true),
     chapterSkips: syncedFlag('chapterSkips', true, [
       'aiostreams-desktop-chapter-skips',
     ]),

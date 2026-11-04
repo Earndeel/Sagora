@@ -5420,3 +5420,27 @@ msgstr "Title colours"
 #: src/pages/settings/interface.tsx
 msgid "Play buttons, progress bars and a few glows take a colour from the artwork of the title on screen. Off, they keep the theme's colours."
 msgstr "Play buttons, progress bars and a few glows take a colour from the artwork of the title on screen. Off, they keep the theme's colours."
+
+#: src/lib/playback/fallback.ts
+msgid "This version is taking too long to start, trying another one…"
+msgstr "This version is taking too long to start, trying another one…"
+
+#: src/lib/playback/fallback.ts
+msgid "This version didn't play, trying another one…"
+msgstr "This version didn't play, trying another one…"
+
+#: src/pages/settings/playback.tsx
+msgid "Try another version when one fails"
+msgstr "Try another version when one fails"
+
+#: src/pages/settings/playback.tsx
+msgid "When a version can't be fetched or decoded, or shows nothing for 30 seconds, the next one plays from the same point, up to two times. Waiting for data while playing doesn't count."
+msgstr "When a version can't be fetched or decoded, or shows nothing for 30 seconds, the next one plays from the same point, up to two times. Waiting for data while playing doesn't count."
+
+#: src/lib/playback/video.ts
+msgid "the connection to this version was lost."
+msgstr "the connection to this version was lost."
+
+#: src/lib/playback/video.ts
+msgid "this version could not be decoded on this device. Try another version, an external player or the desktop app."
+msgstr "this version could not be decoded on this device. Try another version, an external player or the desktop app."

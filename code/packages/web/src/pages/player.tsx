@@ -100,6 +100,7 @@ import { useRemotePlayer } from '../components/remote-target';
 import { indexForTrack } from '../lib/remote/tracks';
 import { useLatest } from '../lib/use-latest';
 import { useTitleAccent } from '../lib/title-accent';
+import { useVersionFallback } from '../lib/playback/fallback';
 import { openPartySheet } from '../components/party/party-sheet';
 import { usePlaylistEdits, usePlaylistName } from '../lib/playlists';
 
@@ -713,6 +714,14 @@ function Player({
   });
   connect(next);
   const switchVersion = useSwitchVersion(item, source, player, next.playlist);
+  const fallback = useVersionFallback({
+    item,
+    source,
+    player,
+    startMs,
+    playlist: next.playlist,
+    enabled: !local && !youTube && !playlistItemId && !mini,
+  });
   const together = () =>
     openPartySheet(
       inParty
@@ -810,7 +819,8 @@ function Player({
               <Trans>Playing in {launchedName}</Trans>
             </p>
           )}
-          {player.state.error ? (
+          {player.state.error && fallback.pending ? null : player.state
+              .error ? (
             <Failure
               itemId={item.Id!}
               item={item}

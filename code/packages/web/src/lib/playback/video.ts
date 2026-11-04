@@ -187,14 +187,27 @@ export function videoEngine(
           volumechange: () => set({ volume: el.volume, muted: el.muted }),
           ratechange: () => set({ rate: el.playbackRate }),
           ended: () => emit({ type: 'ended' }),
+          // MediaError: 2 the network failed, 3 decoding failed, 4 the stream can't be fetched or played.
           error: () =>
             emit({
               type: 'failed',
-              error: t({
-                comment: 'Follows "Playback failed:"',
-                message:
-                  'this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app.',
-              }),
+              error:
+                el.error?.code === 2
+                  ? t({
+                      comment: 'Follows "Playback failed:"',
+                      message: 'the connection to this version was lost.',
+                    })
+                  : el.error?.code === 3
+                    ? t({
+                        comment: 'Follows "Playback failed:"',
+                        message:
+                          'this version could not be decoded on this device. Try another version, an external player or the desktop app.',
+                      })
+                    : t({
+                        comment: 'Follows "Playback failed:"',
+                        message:
+                          'this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app.',
+                      }),
             }),
         };
         for (const [event, handler] of Object.entries(handlers))

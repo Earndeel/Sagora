@@ -5250,3 +5250,27 @@ msgstr "Couleurs du titre"
 #: src/pages/settings/interface.tsx
 msgid "Play buttons, progress bars and a few glows take a colour from the artwork of the title on screen. Off, they keep the theme's colours."
 msgstr "Les boutons Lecture, les barres de progression et quelques halos prennent une couleur tirée de l'affiche du titre à l'écran. Désactivé, ils gardent les couleurs du thème."
+
+#: src/lib/playback/fallback.ts
+msgid "This version is taking too long to start, trying another one…"
+msgstr "Cette version tarde à démarrer, essai d'une autre…"
+
+#: src/lib/playback/fallback.ts
+msgid "This version didn't play, trying another one…"
+msgstr "Cette version ne se lit pas, essai d'une autre…"
+
+#: src/pages/settings/playback.tsx
+msgid "Try another version when one fails"
+msgstr "Essayer une autre version en cas d'échec"
+
+#: src/pages/settings/playback.tsx
+msgid "When a version can't be fetched or decoded, or shows nothing for 30 seconds, the next one plays from the same point, up to two times. Waiting for data while playing doesn't count."
+msgstr "Quand une version ne peut pas être récupérée ou décodée, ou n'affiche rien pendant 30 secondes, la suivante reprend au même endroit, deux fois au plus. Un chargement pendant la lecture ne compte pas."
+
+#: src/lib/playback/video.ts
+msgid "the connection to this version was lost."
+msgstr "la connexion à cette version a été perdue."
+
+#: src/lib/playback/video.ts
+msgid "this version could not be decoded on this device. Try another version, an external player or the desktop app."
+msgstr "cette version ne peut pas être décodée sur cet appareil. Essayez une autre version, un lecteur externe ou l'application de bureau."

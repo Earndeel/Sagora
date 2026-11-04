@@ -106,6 +106,7 @@ export function PlaybackSection() {
   );
   const [autoPlay, setAutoPlay] = useSetting(settings.playback.autoPlayFirst);
   const [preload, setPreload] = useSetting(settings.playback.preloadVersions);
+  const [fallback, setFallback] = useSetting(settings.playback.autoFallback);
   const [nextPrompt, setNextPrompt] = useSetting(settings.next.prompt);
   const [nextLead, setNextLead] = useSetting(settings.next.lead);
   const [nextCountdown, setNextCountdown] = useSetting(settings.next.countdown);
@@ -161,6 +162,13 @@ export function PlaybackSection() {
           }
           value={autoPlay}
           onValueChange={setAutoPlay}
+        />
+        <Switch
+          side="right"
+          label={t`Try another version when one fails`}
+          help={t`When a version can't be fetched or decoded, or shows nothing for 30 seconds, the next one plays from the same point, up to two times. Waiting for data while playing doesn't count.`}
+          value={fallback}
+          onValueChange={setFallback}
         />
         <Switch
           side="right"
