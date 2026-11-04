@@ -101,6 +101,7 @@ import { indexForTrack } from '../lib/remote/tracks';
 import { useLatest } from '../lib/use-latest';
 import { useTitleAccent } from '../lib/title-accent';
 import { useVersionFallback } from '../lib/playback/fallback';
+import { useVersionLanguages } from '../lib/playback/version-languages';
 import { openPartySheet } from '../components/party/party-sheet';
 import { usePlaylistEdits, usePlaylistName } from '../lib/playlists';
 
@@ -714,6 +715,13 @@ function Player({
   });
   connect(next);
   const switchVersion = useSwitchVersion(item, source, player, next.playlist);
+  const languages = useVersionLanguages({
+    item,
+    source,
+    player,
+    playlist: next.playlist,
+    enabled: !local && !youTube && !playlistItemId,
+  });
   const fallback = useVersionFallback({
     item,
     source,
@@ -839,6 +847,7 @@ function Player({
                   onBack={back}
                   onMinimise={minimise}
                   offeringNext={!!next.element}
+                  languages={languages}
                   onVersions={switchVersion}
                   onPrevious={next.previous ? next.playPrevious : undefined}
                   onNext={next.next ? next.playNext : undefined}

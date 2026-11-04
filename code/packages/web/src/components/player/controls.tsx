@@ -1,6 +1,7 @@
 import { plural, t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
+import type { VersionLanguages } from '../../lib/playback/version-languages';
 import {
   LuArrowLeft,
   LuCaptions,
@@ -79,6 +80,7 @@ export function PlayerControls({
   segments: segmentItems,
   onBack,
   onMinimise,
+  languages,
   onVersions,
   onPrevious,
   onNext,
@@ -95,6 +97,7 @@ export function PlayerControls({
   segments: MediaSegmentDto[] | null | undefined;
   onBack(): void;
   onMinimise?: () => void;
+  languages?: VersionLanguages;
   onVersions?: () => void;
   onPrevious?: () => void;
   onNext?: () => void;
@@ -721,6 +724,7 @@ export function PlayerControls({
           <OptionButtons
             player={player}
             onMenu={onMenu}
+            languages={languages}
             onVersions={onVersions}
             onEpisodes={listsEpisodes ? () => setEpisodes(true) : undefined}
             onChapters={listsChapters ? () => setChapters(true) : undefined}

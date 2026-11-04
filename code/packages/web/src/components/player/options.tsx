@@ -4,6 +4,7 @@ import React from 'react';
 import {
   LuActivity,
   LuAudioLines,
+  LuLanguages,
   LuCaptions,
   LuCaptionsOff,
   LuCheck,
@@ -31,6 +32,7 @@ import {
   LuUsers,
   LuWandSparkles,
 } from 'react-icons/lu';
+import type { VersionLanguages } from '../../lib/playback/version-languages';
 import {
   DropdownMenu,
   DropdownMenuItem,
@@ -551,6 +553,7 @@ function SubtitleTiming({
 export function OptionButtons({
   player,
   onMenu,
+  languages,
   onVersions,
   onEpisodes,
   onChapters,
@@ -563,6 +566,8 @@ export function OptionButtons({
 }: {
   player: PlayerController;
   onMenu(open: boolean): void;
+  /** The spoken languages of the item's versions, each a pick of version. */
+  languages?: VersionLanguages;
   onParty?: () => void;
   onVersions?: () => void;
   onEpisodes?: () => void;
@@ -624,6 +629,17 @@ export function OptionButtons({
         <ControlButton name="versions" label={t`Versions`} onClick={onVersions}>
           <LuLayers />
         </ControlButton>
+      )}
+      {languages && (
+        <Menu
+          name="language"
+          label={t`Language`}
+          icon={<LuLanguages />}
+          options={languages.options}
+          value={languages.value}
+          onSelect={languages.onSelect}
+          {...menuState('language')}
+        />
       )}
       {(player.audioTracks.length > 1 || player.sound) && (
         <Menu

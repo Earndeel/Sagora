@@ -5274,3 +5274,15 @@ msgstr "la connexion à cette version a été perdue."
 #: src/lib/playback/video.ts
 msgid "this version could not be decoded on this device. Try another version, an external player or the desktop app."
 msgstr "cette version ne peut pas être décodée sur cet appareil. Essayez une autre version, un lecteur externe ou l'application de bureau."
+
+#: src/lib/playback/version-languages.ts
+msgid "{count} versions"
+msgstr "{count} versions"
+
+#: src/lib/playback/version-languages.ts
+msgid "{count} versions, {alone} in this language only"
+msgstr "{count} versions, dont {alone} uniquement dans cette langue"
+
+#: src/lib/playback/version-languages.ts
+msgid "{count, plural, one {# version} other {# versions}}"
+msgstr "{count, plural, one {# version} other {# versions}}"
