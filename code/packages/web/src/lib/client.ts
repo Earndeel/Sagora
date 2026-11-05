@@ -1,4 +1,5 @@
 import { t } from '@lingui/core/macro';
+import { i18n } from '@lingui/core';
 import { storage } from './storage';
 import { currentHost } from './hosts';
 import { reached, unreachable } from './connection';
@@ -135,6 +136,8 @@ function hints(device: string, purpose?: Purpose): Record<string, string> {
   if (network && network !== 'unknown')
     headers['X-AIOStreams-Network'] = network;
   if (purpose) headers['X-AIOStreams-Purpose'] = purpose;
+  // The profile's interface language, so a variant can serve its metadata in it.
+  if (i18n.locale) headers['X-AIOStreams-Language'] = i18n.locale;
   return headers;
 }
 

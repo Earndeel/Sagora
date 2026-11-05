@@ -49,6 +49,15 @@ for (const el of [container, document.body]) {
   };
 }
 
+// Titles, overviews and trailers come in the interface language, so a new one refetches them.
+let shownLocale = '';
+i18n.on('change', () => {
+  if (shownLocale && i18n.locale !== shownLocale) {
+    void queryClient.invalidateQueries();
+  }
+  shownLocale = i18n.locale;
+});
+
 // The page waits for its language, so it never shows English first.
 void startI18n().then(() =>
   ReactDOM.createRoot(container).render(
