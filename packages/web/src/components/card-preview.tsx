@@ -180,8 +180,45 @@ function usePreviewAccent(item: BaseItemDto) {
   return src ? colour : null;
 }
 
+/** How long the cards beside an opening preview take to make room. */
+const MAKE_ROOM_MS = 200;
+
+/**
+ * The cards beside `card` in its row slide out from under the preview at
+ * `at`, each side by as much as the preview overhangs it, and back on closing.
+ */
+function useMakeRoom(card: HTMLElement, at: { left: number; width: number }) {
+  React.useLayoutEffect(() => {
+    const own = card.closest<HTMLElement>('[data-ui=media-row-item]');
+    if (!own?.parentElement) return;
+    const r = own.getBoundingClientRect();
+    const before = Math.max(0, r.left - at.left);
+    const after = Math.max(0, at.left + at.width - r.right);
+    if (!before && !after) return;
+    const centre = r.left + r.width / 2;
+    const moved: HTMLElement[] = [];
+    for (const el of own.parentElement.children) {
+      if (el === own || !(el instanceof HTMLElement)) continue;
+      if (el.dataset.ui !== 'media-row-item') continue;
+      const box = el.getBoundingClientRect();
+      const dx = box.left + box.width / 2 > centre ? after : -before;
+      if (!dx) continue;
+      el.style.transition = `transform ${MAKE_ROOM_MS}ms ease-out`;
+      el.style.transform = `translateX(${dx}px)`;
+      moved.push(el);
+    }
+    return () => {
+      for (const el of moved) el.style.transform = '';
+      setTimeout(() => {
+        for (const el of moved) if (!el.style.transform) el.style.transition = '';
+      }, MAKE_ROOM_MS);
+    };
+  }, [card, at]);
+}
+
 function Preview({ target, onClose }: { target: Target; onClose(): void }) {
   const [at] = React.useState(() => place(target.card));
+  useMakeRoom(target.card, at);
   const tv = !!currentHost().tv;
   const accent = usePreviewAccent(target.item);
   return (
