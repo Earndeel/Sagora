@@ -5456,3 +5456,7 @@ msgstr "{count} versions, {alone} in this language only"
 #: src/lib/playback/version-languages.ts
 msgid "{count, plural, one {# version} other {# versions}}"
 msgstr "{count, plural, one {# version} other {# versions}}"
+
+#: src/lib/playback/adaptive.ts
+msgid "The connection is slow, switching to a lighter version…"
+msgstr "The connection is slow, switching to a lighter version…"

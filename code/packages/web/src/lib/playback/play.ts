@@ -14,6 +14,7 @@ import { sameLanguage } from '../languages';
 import { party } from '../party/party';
 import { usePlayForParty } from '../party/actions';
 import type { BaseItemDto, PlaybackInfoResponse, SourceInfo } from '../types';
+import { fittingFirst } from './bitrate-cap';
 
 /** The version each item last played in, which resuming it goes straight to. */
 export const lastVersions = storedMap<string>(
@@ -37,12 +38,16 @@ export function playableSources(
 /**
  * The versions the app may start on its own (Play straight, a failing version's
  * replacement, the next episode): never one the debrid service still has to
- * download, which only a pick from the version list may start.
+ * download, which only a pick from the version list may start, and those
+ * this device's connection can carry ahead of heavier ones.
  */
 export function automaticSources(
   info: PlaybackInfoResponse | undefined
 ): SourceInfo[] {
-  return playableSources(info).filter((s) => s.aiostreams?.cached !== false);
+  // Those within what this device's connection carried last come first.
+  return fittingFirst(
+    playableSources(info).filter((s) => s.aiostreams?.cached !== false)
+  );
 }
 
 /** Notices by the version each came after, `null` for those before them all. */

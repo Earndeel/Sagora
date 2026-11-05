@@ -105,6 +105,7 @@ import { indexForTrack } from '../lib/remote/tracks';
 import { useLatest } from '../lib/use-latest';
 import { useTitleAccent } from '../lib/title-accent';
 import { useVersionFallback } from '../lib/playback/fallback';
+import { useAdaptiveVersion } from '../lib/playback/adaptive';
 import { useVersionLanguages } from '../lib/playback/version-languages';
 import { openPartySheet } from '../components/party/party-sheet';
 import { usePlaylistEdits, usePlaylistName } from '../lib/playlists';
@@ -741,6 +742,13 @@ function Player({
     source,
     player,
     startMs,
+    playlist: next.playlist,
+    enabled: !local && !youTube && !playlistItemId && !mini,
+  });
+  useAdaptiveVersion({
+    item,
+    source,
+    player,
     playlist: next.playlist,
     enabled: !local && !youTube && !playlistItemId && !mini,
   });
