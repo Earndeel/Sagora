@@ -44,7 +44,7 @@ jobs:
           yes | "$sdkmanager" --licenses >/dev/null
           pinned() { sed -n "s/^$1 = \"\(.*\)\"/\1/p" packages/android/gradle/libs.versions.toml; }
           "$sdkmanager" --install "platforms;android-37.2" "ndk;$(pinned android-ndk)" "cmake;$(pinned android-cmake)" >/dev/null
-      - name: Build (non signé : la VM signe avec la clé de Sagora, qui ne quitte pas Bitwarden)
+      - name: "Build (non signé, la VM signe avec la clé de Sagora, qui ne quitte pas Bitwarden)"
         working-directory: packages/android
         env:
           VERSION: ${{ inputs.version }}
