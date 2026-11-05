@@ -356,11 +356,37 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
   content: '';
   position: absolute;
   inset: 0;
+  /* Behind the play button, fading out before the hero's left and bottom
+     edges so it never ends in a line against the side bar or the rows. */
   background: radial-gradient(
-    ellipse 55% 85% at 12% 100%,
+    ellipse 45% 70% at 26% 74%,
     color-mix(in srgb, var(--title-accent) 16%, transparent),
     transparent 70%
   );
+  mask-image:
+    linear-gradient(to right, transparent, black 25%),
+    linear-gradient(to top, transparent, black 45%);
+  mask-composite: intersect;
+  -webkit-mask-composite: source-in;
+}
+
+/* Home hero on a wide screen: the artwork and its teaser sit a little smaller
+   in the top right corner and melt into the page on the left and below,
+   so no edge shows against the side bar or the rows under it. */
+@media (min-width: 1024px) {
+  [data-ui='hero-backdrops'] > div > [data-ui='backdrop-frame'] {
+    inset-block: 0 auto;
+    height: 90%;
+    width: 92%;
+    mask-image:
+      linear-gradient(to right, transparent, black 32%),
+      linear-gradient(to top, transparent, black 38%);
+    mask-composite: intersect;
+    -webkit-mask-composite: source-in;
+  }
+  [data-ui='hero'] > [data-ui='hero-shade'][data-name='bottom'] {
+    height: 85%;
+  }
 }
 :root[data-title-colours] [data-ui='card-preview'][data-accent] {
   box-shadow:
