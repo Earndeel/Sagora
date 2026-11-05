@@ -1,7 +1,8 @@
 import React from 'react';
+import { currentHost } from './hosts';
 
 /**
- * Teasers: a title's trailer playing muted in place of its artwork, as in
+ * Teasers: a title's trailer playing with sound in place of its artwork, as in
  * the hero and in a card's preview. Only one plays at a time: the highest
  * priority holds the turn, the latest among equals, and gives it back when
  * it lets go, so a card's preview takes over from the hero, which cannot take
@@ -12,7 +13,8 @@ type Listener = () => void;
 
 const claims: { key: string; priority: number }[] = [];
 const listeners = new Set<Listener>();
-let muted = true;
+/** Sound is on until the viewer turns it off, for the rest of the visit. */
+let muted = false;
 let sounding: string | null = null;
 
 const emit = () => listeners.forEach((l) => l());
@@ -20,6 +22,27 @@ const subscribe = (l: Listener) => {
   listeners.add(l);
   return () => void listeners.delete(l);
 };
+
+/*
+ * A browser pauses a video that turns its sound on before the page has been
+ * clicked or typed into, so teasers stay silent until then; the Android app
+ * plays sound from the start.
+ */
+let activated =
+  typeof navigator === 'undefined' ||
+  navigator.userActivation?.hasBeenActive !== false;
+if (!activated && typeof document !== 'undefined') {
+  const activate = () => {
+    activated = true;
+    for (const type of ['pointerdown', 'keydown'])
+      document.removeEventListener(type, activate, true);
+    emit();
+  };
+  for (const type of ['pointerdown', 'keydown'])
+    document.addEventListener(type, activate, true);
+}
+const soundAllowed = () =>
+  activated || currentHost().name === 'android-app';
 
 function holder(): string | undefined {
   let top: (typeof claims)[number] | undefined;
@@ -47,8 +70,12 @@ export function useTeaserTurn(
   return React.useSyncExternalStore(subscribe, () => wants && holder() === key);
 }
 
+/** Whether teasers are silent: turned off, or the page can't play sound yet. */
 export function useTeaserMuted(): [boolean, (muted: boolean) => void] {
-  const value = React.useSyncExternalStore(subscribe, () => muted);
+  const value = React.useSyncExternalStore(
+    subscribe,
+    () => muted || !soundAllowed()
+  );
   return [
     value,
     React.useCallback((next: boolean) => {
