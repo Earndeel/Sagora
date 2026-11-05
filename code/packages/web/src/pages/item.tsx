@@ -482,7 +482,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
         ) : (
           <h1
             data-ui="item-title"
-            className="text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl"
+            className="text-3xl font-bold leading-tight sm:text-4xl sm:leading-tight lg:text-5xl lg:leading-tight"
           >
             {item.Name}
           </h1>

@@ -284,7 +284,7 @@ function HeroDetails({
       ) : (
         <h1
           data-ui="hero-title"
-          className="line-clamp-2 text-3xl font-bold leading-tight lg:text-5xl"
+          className="line-clamp-2 text-3xl font-bold leading-tight lg:text-5xl lg:leading-tight"
         >
           {itemTitle(item)}
         </h1>
