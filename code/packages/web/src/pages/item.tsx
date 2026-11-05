@@ -9,6 +9,7 @@ import {
   BiDislike,
   BiGroup,
   BiHeart,
+  BiLayer,
   BiListPlus,
   BiPlay,
   BiRevision,
@@ -661,6 +662,7 @@ const QuickShown = React.createContext<string[] | null>(null);
 /** What the phone row fills its three places from, in this order. */
 const QUICK = [
   'trailer',
+  'versions',
   'watched',
   'favourite',
   'download',
@@ -678,6 +680,8 @@ function useOffered(item: BaseItemDto, target?: BaseItemDto) {
   const type = item.Type;
   return {
     trailer: !!trailersOf(item).length,
+    // The sources to choose from, for what Play would start.
+    versions: !!target && playable(target),
     watched: type !== 'BoxSet',
     favourite: offersFavourite(type, !!item.UserData?.IsFavorite),
     download:
@@ -749,6 +753,25 @@ function SecondaryActions({
       {offered.trailer && (
         <Captioned ui={caption} name="trailer" label={t`Trailer`}>
           <TrailerButton item={item} compact={!!caption} teaserKey="item" />
+        </Captioned>
+      )}
+      {target && offered.versions && (
+        <Captioned ui={caption} name="versions" label={t`Versions`}>
+          <Tooltip
+            trigger={
+              <IconButton
+                data-ui="item-action"
+                data-name="versions"
+                intent="gray-subtle"
+                className="rounded-full"
+                icon={<BiLayer />}
+                aria-label={t`Choose a version`}
+                onClick={() => picker.open(target, { startMs: resumeMs })}
+              />
+            }
+          >
+            <Trans>Choose a version</Trans>
+          </Tooltip>
         </Captioned>
       )}
       {offered.random && (
