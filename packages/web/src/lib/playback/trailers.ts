@@ -39,8 +39,13 @@ export type TrailerPlayback =
 async function playbackOf(url: string): Promise<TrailerPlayback> {
   const id = youTubeId(url);
   if (!id) return { kind: 'video', url };
-  const { resolveYouTube } = currentHost();
-  if (resolveYouTube) {
+  const host = currentHost();
+  // The Android app's resolver gets HD only as HLS, which its web view can't
+  // play: its https page takes YouTube's embed, as the web does.
+  const embedded =
+    host.name === 'android-app' && location.protocol === 'https:';
+  if (host.resolveYouTube && !embedded) {
+    const { resolveYouTube } = host;
     const stream = await resolveYouTube(id);
     return stream ? { kind: 'video', url: stream } : { kind: 'external', url };
   }
