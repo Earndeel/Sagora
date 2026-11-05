@@ -4628,8 +4628,8 @@ msgid "Title pages"
 msgstr "内容详情页"
 
 #: src/pages/settings/interface.tsx
-msgid "Titles, synopses and stream names stay in the language your addons send."
-msgstr "内容标题、简介和串流名称会保留插件提供的语言。"
+msgid "Titles, synopses and trailers follow it; stream names stay as your addons send them."
+msgstr ""
 
 #: src/pages/calendar.tsx
 msgid "Today"

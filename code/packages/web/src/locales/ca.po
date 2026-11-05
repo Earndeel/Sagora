@@ -4601,7 +4601,7 @@ msgid "Title pages"
 msgstr ""
 
 #: src/pages/settings/interface.tsx
-msgid "Titles, synopses and stream names stay in the language your addons send."
+msgid "Titles, synopses and trailers follow it; stream names stay as your addons send them."
 msgstr ""
 
 #: src/pages/calendar.tsx

@@ -213,7 +213,7 @@ function LanguageCard() {
     >
       <Select
         label={t`App language`}
-        help={t`Titles, synopses and stream names stay in the language your addons send.`}
+        help={t`Titles, synopses and trailers follow it; stream names stay as your addons send them.`}
         options={[{ value: 'auto', label: t`System (${system})` }, ...listed]}
         value={LOCALES.includes(language) ? language : 'auto'}
         onValueChange={setLanguage}
