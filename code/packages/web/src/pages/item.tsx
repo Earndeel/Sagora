@@ -69,7 +69,9 @@ import {
 } from '../lib/format';
 import { href, itemPath, navigate, to } from '../lib/paths';
 import { settings, useSetting } from '../lib/settings';
-import { useInView, useNear } from '../lib/use-in-view';
+import { useInView, useNear, watch } from '../lib/use-in-view';
+import { usePageShown } from '../lib/page-shown';
+import { Teaser, TeaserSoundButton } from '../components/teaser';
 import { MediaRow } from '../components/media-row';
 import { PageMessage } from '../components/layout';
 import { NoDetails } from '../components/no-details';
@@ -175,6 +177,15 @@ export function ItemPage({
       <Backdrop
         images={data ? backdropUrls(client, data, { maxWidth: 1920 }) : []}
         poster={data ? posterUrl(client, data, { maxWidth: 160 }) : null}
+        teaser={
+          data && (data.Type === 'Movie' || data.Type === 'Series')
+            ? data
+            : undefined
+        }
+      />
+      <TeaserSoundButton
+        teaserKey="item"
+        className="absolute end-4 top-4 z-[2] lg:end-10"
       />
       <div
         data-ui="item-body"
@@ -207,14 +218,39 @@ export function ItemPage({
   );
 }
 
-/** Past the landscape art, the poster stands in as a blurred wash of its colours. */
+/** How long a title's artwork shows before its teaser starts loading, hidden. */
+const ITEM_TEASER_MS = 0;
+
+/**
+ * Past the landscape art, the poster stands in as a blurred wash of its colours.
+ * A film's or show's teaser plays over it while it is in sight.
+ */
 function Backdrop({
   images,
   poster,
+  teaser,
 }: {
   images: string[];
   poster: string | null;
+  teaser?: BaseItemDto;
 }) {
+  const box = React.useRef<HTMLDivElement>(null);
+  const shown = usePageShown();
+  const [inSight, setInSight] = React.useState(true);
+  React.useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    return watch(el, null, '0px', (entry) => setInSight(entry.isIntersecting));
+  }, []);
+  const clip = teaser && (
+    <Teaser
+      key={teaser.Id}
+      item={teaser}
+      teaserKey="item"
+      active={shown && inSight}
+      delayMs={ITEM_TEASER_MS}
+    />
+  );
   const sources = poster ? [...images, poster] : images;
   const key = sources.join('|');
   // Tied to the sources, not reset by an effect, which a cached image can load before.
@@ -247,16 +283,21 @@ function Backdrop({
   );
   return (
     <div
+      ref={box}
       aria-hidden
       data-ui="item-backdrop"
       // Fades out at its edge, where some GPUs draw the art's last row past the shade.
       className="pointer-events-none absolute inset-x-0 top-[calc(var(--top-bar,0px)*-1)] h-[calc(55vh+var(--top-bar,0px))] overflow-hidden [mask-image:linear-gradient(to_top,transparent,black_2px)] lg:h-[calc(85vh+var(--top-bar,0px))]"
     >
       {wash ? (
-        image
+        <>
+          {image}
+          {clip}
+        </>
       ) : (
         <BackdropFrame className="max-w-[calc(55vh*2.6)] lg:max-w-[calc(85vh*2.6)]">
           {image}
+          {clip}
         </BackdropFrame>
       )}
       <div

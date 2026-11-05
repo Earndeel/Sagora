@@ -34,8 +34,8 @@ const FLICK_PX_MS = 0.4;
 const SETTLE_MS = 300;
 /** How long the pointer or focus rests on a card before the hero follows it. */
 const FOLLOW_DELAY_MS = 300;
-/** How long a title's artwork shows before its teaser starts. */
-const HERO_TEASER_MS = 1800;
+/** How long a title's artwork shows before its teaser starts loading, hidden until clean and HD. */
+const HERO_TEASER_MS = 300;
 const FOLLOW_TEASER_MS = 1500;
 
 function Shade() {
@@ -533,8 +533,9 @@ export function Hero({
   const [seconds] = useSetting(settings.interface.heroSeconds);
   const [paused, setPaused] = React.useState(false);
   const [dragging, setDragging] = React.useState(false);
-  // A playing teaser holds the title until it ends.
+  // A playing teaser holds the title until it ends, and one loading until it shows or gives up.
   const [teasing, setTeasing] = React.useState(false);
+  const [loadingTeaser, setLoadingTeaser] = React.useState(false);
   // Keys of the previous, current and next slides, passed round as a swipe
   // lands so the slide faded in stays mounted.
   const [slots, setSlots] = React.useState<[number, number, number]>([0, 1, 2]);
@@ -562,6 +563,7 @@ export function Hero({
       focused ||
       dragging ||
       teasing ||
+      loadingTeaser ||
       !shown ||
       !inSight ||
       featured.length < 2
@@ -578,6 +580,7 @@ export function Hero({
     focused,
     dragging,
     teasing,
+    loadingTeaser,
     shown,
     inSight,
     featured.length,
@@ -660,6 +663,7 @@ export function Hero({
                   active={shown && inSight && !dragging}
                   delayMs={HERO_TEASER_MS}
                   onPlaying={setTeasing}
+                  onLoading={setLoadingTeaser}
                 />
               )}
             </BackdropFrame>

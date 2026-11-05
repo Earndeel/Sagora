@@ -14,11 +14,23 @@ import {
 } from '../lib/teaser';
 import type { BaseItemDto } from '../lib/types';
 
-/** How long a teaser may take to start before the artwork stays. */
-const START_LIMIT_MS = 9000;
+/** How long a teaser may take to show before the artwork stays: load, YouTube's chrome, HD. */
+const START_LIMIT_MS = 15000;
 /** Trailers tried in turn when one refuses to play here, as many do. */
 const MAX_TRIES = 3;
 const HANDSHAKE_MS = 250;
+/**
+ * YouTube shows its title, logo and a play/pause glyph over the first seconds
+ * of an embed even without controls; the teaser stays hidden until they fade.
+ */
+const CHROME_HIDDEN_S = 4;
+/** Below 720p a teaser looks worse than the artwork it replaces. */
+const HD_QUALITIES = new Set(['hd720', 'hd1080', 'hd1440', 'hd2160', 'highres']);
+/** The size the embed lays itself out at: YouTube picks its quality from it. */
+const EMBED_W = 1920;
+const EMBED_H = 1080;
+/** Enlarged past the box to keep the player's edges out of sight. */
+const EMBED_OVERSCAN = 1.2;
 
 /**
  * A title's first trailer, muted, over its artwork once it has played for a
@@ -33,6 +45,7 @@ export function Teaser({
   delayMs,
   priority = 0,
   onPlaying,
+  onLoading,
   onEnded,
   className,
 }: {
@@ -44,6 +57,8 @@ export function Teaser({
   /** A card's preview comes before the hero. */
   priority?: number;
   onPlaying?(playing: boolean): void;
+  /** While its player loads out of sight, before it shows or gives up. */
+  onLoading?(loading: boolean): void;
   onEnded?(): void;
   className?: string;
 }) {
@@ -74,8 +89,8 @@ export function Teaser({
   }, [turn, delayMs, trailer?.url, index]);
   const playback = useTrailerPlayback(due ? trailer?.url : undefined);
   const [playing, setPlaying] = React.useState(false);
-  const latest = React.useRef({ onPlaying, onEnded });
-  latest.current = { onPlaying, onEnded };
+  const latest = React.useRef({ onPlaying, onLoading, onEnded });
+  latest.current = { onPlaying, onLoading, onEnded };
 
   const shown = turn && due && !!playback.data;
   React.useEffect(() => {
@@ -95,9 +110,14 @@ export function Teaser({
     latest.current.onPlaying?.(playing);
     setSounding(teaserKey, playing);
   }, [playing, teaserKey]);
+  const loading = shown && !playing && !over;
+  React.useEffect(() => {
+    latest.current.onLoading?.(loading);
+  }, [loading]);
   React.useEffect(
     () => () => {
       latest.current.onPlaying?.(false);
+      latest.current.onLoading?.(false);
       setSounding(teaserKey, false);
     },
     [teaserKey]
@@ -152,10 +172,35 @@ function YouTubeTeaser({
   onFailed,
 }: { id: string } & TeaserEvents) {
   const frame = React.useRef<HTMLIFrameElement>(null);
+  const box = React.useRef<HTMLDivElement>(null);
+  const [scale, setScale] = React.useState(0);
   const [muted] = useTeaserMuted();
   const [heard, setHeard] = React.useState(false);
   const latest = React.useRef({ onPlaying, onEnded, onFailed, muted });
   latest.current = { onPlaying, onEnded, onFailed, muted };
+  // What the player last reported, and whether the teaser has been shown.
+  const report = React.useRef({
+    state: -1,
+    time: 0,
+    quality: '',
+    shown: false,
+    failed: false,
+  });
+
+  // Laid out at 1920×1080 whatever the box, then scaled down to cover it.
+  React.useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const fit = () =>
+      setScale(
+        Math.max(el.clientWidth / EMBED_W, el.clientHeight / EMBED_H) *
+          EMBED_OVERSCAN
+      );
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const post = React.useCallback(
     (message: object) => {
@@ -182,15 +227,49 @@ function YouTubeTeaser({
         return;
       }
       setHeard(true);
+      const info =
+        data.event === 'infoDelivery' || data.event === 'initialDelivery'
+          ? ((data.info ?? {}) as {
+              playerState?: number;
+              currentTime?: number;
+              playbackQuality?: string;
+              availableQualityLevels?: string[];
+            })
+          : {};
       const state =
         data.event === 'onStateChange'
-          ? data.info
-          : data.event === 'infoDelivery'
-            ? (data.info as { playerState?: number } | undefined)?.playerState
-            : undefined;
-      if (data.event === 'onReady' && !latest.current.muted) command('unMute');
+          ? (data.info as number | undefined)
+          : info.playerState;
+      const now = report.current;
+      if (typeof state === 'number') now.state = state;
+      if (typeof info.currentTime === 'number') now.time = info.currentTime;
+      if (info.playbackQuality) now.quality = info.playbackQuality;
+      if (data.event === 'onReady') {
+        if (!latest.current.muted) command('unMute');
+        command('setPlaybackQuality', ['hd1080']);
+        command('unloadModule', ['captions']);
+      }
       if (data.event === 'onError') latest.current.onFailed();
-      if (state === 1) latest.current.onPlaying();
+      // A trailer that exists only below 720p gives way to the next one.
+      const levels = info.availableQualityLevels ?? [];
+      if (
+        !now.shown &&
+        !now.failed &&
+        levels.length &&
+        !levels.some((level) => HD_QUALITIES.has(level))
+      ) {
+        now.failed = true;
+        latest.current.onFailed();
+      }
+      if (
+        !now.shown &&
+        now.state === 1 &&
+        now.time >= CHROME_HIDDEN_S &&
+        HD_QUALITIES.has(now.quality)
+      ) {
+        now.shown = true;
+        latest.current.onPlaying();
+      }
       if (state === 0) latest.current.onEnded();
     };
     addEventListener('message', receive);
@@ -210,17 +289,26 @@ function YouTubeTeaser({
 
   const origin = encodeURIComponent(location.origin);
   return (
-    <iframe
-      ref={frame}
-      data-ui="teaser-embed"
-      title=""
-      tabIndex={-1}
-      src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0&enablejsapi=1&origin=${origin}`}
-      allow="autoplay; encrypted-media"
-      referrerPolicy="strict-origin-when-cross-origin"
-      onLoad={() => post({ event: 'listening' })}
-      className={COVER}
-    />
+    <div ref={box} className="absolute inset-0">
+      {scale > 0 && (
+        <iframe
+          ref={frame}
+          data-ui="teaser-embed"
+          title=""
+          tabIndex={-1}
+          src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0&cc_load_policy=0&vq=hd1080&enablejsapi=1&origin=${origin}`}
+          allow="autoplay; encrypted-media"
+          referrerPolicy="strict-origin-when-cross-origin"
+          onLoad={() => post({ event: 'listening' })}
+          style={{
+            width: EMBED_W,
+            height: EMBED_H,
+            transform: `translate(-50%, -50%) scale(${scale})`,
+          }}
+          className="absolute left-1/2 top-1/2 max-w-none border-0"
+        />
+      )}
+    </div>
   );
 }
 
