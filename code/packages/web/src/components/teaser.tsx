@@ -32,6 +32,10 @@ const EMBED_W = 1920;
 const EMBED_H = 1080;
 /** Enlarged past the box to keep the player's edges out of sight. */
 const EMBED_OVERSCAN = 1.2;
+/** A cinema-wide trailer is enlarged to its picture, past its black bands, and only this much more. */
+const PICTURE_OVERSCAN = 1.03;
+/** Wider than this, YouTube's black bands above and below would still show at EMBED_OVERSCAN. */
+const BANDED_FROM = (EMBED_W / EMBED_H) * EMBED_OVERSCAN;
 /** The sound rises over this once the teaser shows, never as the page opens. */
 const FADE_IN_MS = 3000;
 /** Full screen, asked for with a click: the sound comes quickly. */
@@ -249,6 +253,72 @@ function FullControls({
 const COVER =
   'absolute start-1/2 top-1/2 h-[max(100cqh,56.25cqw)] w-[max(100cqw,177.78cqh)] -translate-x-1/2 -translate-y-1/2 scale-[1.2] rtl:translate-x-1/2 border-0';
 
+/* Each trailer's picture width over height, measured once. */
+const ratios = new Map<string, Promise<number>>();
+
+/** How tall the picture is in one of YouTube's 4:3 stills of the video, black bands left out. */
+function pictureRatio(src: string): Promise<number | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onerror = () => resolve(null);
+    img.onload = () => {
+      try {
+        const w = 160;
+        const h = Math.round((img.naturalHeight / img.naturalWidth) * w);
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+        ctx.drawImage(img, 0, 0, w, h);
+        const { data } = ctx.getImageData(0, 0, w, h);
+        // A row is picture once any pixel in it is more than near black.
+        const lit = (y: number) => {
+          for (let x = 0; x < w; x++) {
+            const i = (y * w + x) * 4;
+            if (Math.max(data[i], data[i + 1], data[i + 2]) > 40) return true;
+          }
+          return false;
+        };
+        let top = 0;
+        while (top < h && !lit(top)) top++;
+        let bottom = h - 1;
+        while (bottom > top && !lit(bottom)) bottom--;
+        resolve(bottom > top ? w / (bottom - top + 1) : null);
+      } catch {
+        resolve(null);
+      }
+    };
+    img.src = src;
+  });
+}
+
+/**
+ * The trailer's picture ratio, 16:9 until known: three stills from its start,
+ * middle and end, the lightest one, as a dark scene looks like black bands.
+ */
+function useVideoRatio(id: string): number {
+  const [ratio, setRatio] = React.useState(EMBED_W / EMBED_H);
+  React.useEffect(() => {
+    let current = true;
+    let known = ratios.get(id);
+    if (!known) {
+      known = Promise.all(
+        [1, 2, 3].map((n) => pictureRatio(`https://i.ytimg.com/vi/${id}/hq${n}.jpg`))
+      ).then((found) => {
+        const sure = found.filter((r): r is number => r !== null);
+        return sure.length ? Math.min(...sure, 2.4) : EMBED_W / EMBED_H;
+      });
+      ratios.set(id, known);
+    }
+    void known.then((r) => current && setRatio(r));
+    return () => {
+      current = false;
+    };
+  }, [id]);
+  return ratio;
+}
+
 function YouTubeTeaser({
   id,
   onPlaying,
@@ -259,6 +329,7 @@ function YouTubeTeaser({
   const frame = React.useRef<HTMLIFrameElement>(null);
   const box = React.useRef<HTMLDivElement>(null);
   const [scale, setScale] = React.useState(0);
+  const ratio = useVideoRatio(id);
   const [muted] = useTeaserMuted();
   const [heard, setHeard] = React.useState(false);
   const [revealed, setRevealed] = React.useState(false);
@@ -277,20 +348,26 @@ function YouTubeTeaser({
   });
 
   // Laid out at 1920×1080 whatever the box, then scaled down to cover it,
-  // or full screen to show the whole picture.
+  // or full screen to show the whole picture. A cinema-wide trailer covers
+  // it with its picture, leaving YouTube's black bands above and below out.
   React.useLayoutEffect(() => {
     const el = box.current;
     if (!el) return;
     const fit = () => {
       const w = el.clientWidth / EMBED_W;
       const h = el.clientHeight / EMBED_H;
-      setScale(full ? Math.min(w, h) : Math.max(w, h) * EMBED_OVERSCAN);
+      if (full) setScale(Math.min(w, h));
+      else if (ratio > BANDED_FROM)
+        setScale(
+          Math.max(w, el.clientHeight / (EMBED_W / ratio)) * PICTURE_OVERSCAN
+        );
+      else setScale(Math.max(w, h) * EMBED_OVERSCAN);
     };
     fit();
     const observer = new ResizeObserver(fit);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [full]);
+  }, [full, ratio]);
 
   const post = React.useCallback(
     (message: object) => {
