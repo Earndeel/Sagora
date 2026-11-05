@@ -1,0 +1,79 @@
+name: Sagora Android
+
+# Construit l'appli Android Sagora (branche famille + ce fichier) : APK signés avec la clé de Sagora
+# (secrets SAGORA_KEYSTORE_BASE64 / SAGORA_KEYSTORE_PASSWORD, Bitwarden « Sagora · Android signature »).
+# Lancé à la main ; la VM récupère l'artefact et le sert à https://stremio.walter-ai.cloud/sagora-app/android.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version (SemVer)
+        required: true
+        default: 0.13.0-sagora.1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter "@aiostreams/web..."
+      - run: pnpm -F @aiostreams/web build:standalone
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk,cargo-about@0.9.2
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/android/natives/rust
+      - name: Install the SDK platform, NDK and CMake
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses >/dev/null
+          pinned() { sed -n "s/^$1 = \"\(.*\)\"/\1/p" packages/android/gradle/libs.versions.toml; }
+          "$sdkmanager" --install "platforms;android-37.2" "ndk;$(pinned android-ndk)" "cmake;$(pinned android-cmake)" >/dev/null
+      - name: Build
+        working-directory: packages/android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SAGORA_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SAGORA_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: sagora
+          ANDROID_KEY_PASSWORD: ${{ secrets.SAGORA_KEYSTORE_PASSWORD }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          [ -n "$KEYSTORE_BASE64" ] || { echo "::error::SAGORA_KEYSTORE_BASE64 manquant"; exit 1; }
+          export ANDROID_KEYSTORE="$RUNNER_TEMP/release.keystore"
+          echo "$KEYSTORE_BASE64" | base64 -d >"$ANDROID_KEYSTORE"
+          code=$(( ($(date -u +%s) - 1704067200) / 60 ))
+          ./gradlew --no-configuration-cache :app:assembleRelease \
+            -Paiostreams.version="$VERSION" -Paiostreams.versionCode="$code"
+          mkdir -p out
+          apks='{}'
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            name="sagora-android-$abi.apk"
+            cp "app/build/outputs/apk/release/app-$abi-release.apk" "out/$name"
+            apks=$(jq --arg abi "$abi" --arg name "$name" \
+              --arg sha256 "$(sha256sum "out/$name" | cut -d' ' -f1)" \
+              --argjson size "$(stat -c %s "out/$name")" \
+              '.[$abi] = {name: $name, sha256: $sha256, size: $size}' <<<"$apks")
+          done
+          jq -n --arg version "$VERSION" --argjson code "$code" --argjson apks "$apks" \
+            '{version: $version, versionCode: $code, apks: $apks}' >out/update.json
+          cat out/update.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sagora-android
+          path: packages/android/out
+          compression-level: 0
