@@ -32,7 +32,8 @@ android {
     namespace = "io.github.viren070.aiostreams"
 
     defaultConfig {
-        applicationId = "io.github.viren070.aiostreams"
+        // Sagora : à côté de l'appli officielle, signée par nous (2026-11-05).
+        applicationId = "cloud.walter.sagora"
         // CI names nightlies and counts builds; release-please keeps version.txt.
         versionName = providers.gradleProperty("aiostreams.version")
             .orElse(providers.fileContents(rootProject.layout.projectDirectory.file("version.txt")).asText.map(String::trim))
@@ -40,9 +41,9 @@ android {
         versionCode = providers.gradleProperty("aiostreams.versionCode").map(String::toInt).getOrElse(1)
         buildConfigField("String", "WEB_URL", "\"\"")
         val feed = providers.gradleProperty("aiostreams.updateFeed")
-            .getOrElse("https://github.com/Viren070/AIOStreams/releases/download")
+            .getOrElse("https://stremio.walter-ai.cloud/sagora-app")
         buildConfigField("String", "UPDATE_FEED", "\"$feed\"")
-        resValue("string", "app_name", "AIOStreams")
+        resValue("string", "app_name", "Sagora")
         val inspectable = providers.gradleProperty("aiostreams.inspectable").getOrElse("false")
         buildConfigField("boolean", "INSPECTABLE", inspectable)
     }
@@ -72,7 +73,7 @@ android {
         debug {
             // Beside a released copy, which a differently signed build can't replace.
             applicationIdSuffix = ".debug"
-            resValue("string", "app_name", "AIOStreams Debug")
+            resValue("string", "app_name", "Sagora Debug")
             val webUrl = providers.gradleProperty("aiostreams.webUrl").getOrElse("")
             buildConfigField("String", "WEB_URL", "\"$webUrl\"")
         }
