@@ -34,6 +34,17 @@ export function playableSources(
   );
 }
 
+/**
+ * The versions the app may start on its own (Play straight, a failing version's
+ * replacement, the next episode): never one the debrid service still has to
+ * download, which only a pick from the version list may start.
+ */
+export function automaticSources(
+  info: PlaybackInfoResponse | undefined
+): SourceInfo[] {
+  return playableSources(info).filter((s) => s.aiostreams?.cached !== false);
+}
+
 /** Notices by the version each came after, `null` for those before them all. */
 export function placedNotices(
   info: PlaybackInfoResponse | undefined,

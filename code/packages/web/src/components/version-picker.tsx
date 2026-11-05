@@ -51,6 +51,7 @@ import {
 import { chosenPlayer } from '../lib/playback/player-choice';
 import { party } from '../lib/party/party';
 import {
+  automaticSources,
   isNotice,
   lastVersions,
   placedNotices,
@@ -250,7 +251,9 @@ export function VersionPickerProvider({
       try {
         const info = await queryClient.fetchQuery(infoOptions(item.Id!));
         const sources = playableSources(info);
-        const source = sources.find((s) => s.Id === last) ?? sources[0];
+        // On its own, never a version still to be downloaded: the list opens.
+        const source =
+          sources.find((s) => s.Id === last) ?? automaticSources(info)[0];
         if (!source) setRequest({ item, startMs, replace, playlist });
         else
           await playVersion(item, {

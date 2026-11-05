@@ -6,7 +6,7 @@ import { usePlaybackInfo } from '../queries';
 import { settings, useSetting } from '../settings';
 import type { BaseItemDto, SourceInfo } from '../types';
 import type { PlayerController } from './controller';
-import { playableSources } from './play';
+import { automaticSources } from './play';
 
 /**
  * Moves on to the item's next version when the one playing fails for real:
@@ -81,7 +81,7 @@ export function useVersionFallback({
     if (!failed || !enabled || !allowed || pending) return;
     const run = runFor(item.Id!);
     if (run.auto >= MAX_AUTO) return;
-    const next = playableSources(info.data).find(
+    const next = automaticSources(info.data).find(
       (s) => s.Id && !run.tried.has(s.Id) && !s.aiostreams?.ytId
     );
     if (!next) return;

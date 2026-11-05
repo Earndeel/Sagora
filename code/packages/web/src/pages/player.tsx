@@ -13,7 +13,11 @@ import {
   useRefreshAll,
   useSegments,
 } from '../lib/queries';
-import { lastVersions, playableSources } from '../lib/playback/play';
+import {
+  automaticSources,
+  lastVersions,
+  playableSources,
+} from '../lib/playback/play';
 import { chosenPlayer } from '../lib/playback/player-choice';
 import {
   directUrl,
@@ -173,7 +177,17 @@ export function PlayerPage({
   const item = { ...fetched, data: fetched.data ?? local?.item };
   useTitleAccent(item.data);
   const listed = usePlaybackInfo(itemId, { enabled: !local && !sourceId });
-  const named = sourceId || playableSources(listed.data)[0]?.Id || undefined;
+  const named = sourceId || automaticSources(listed.data)[0]?.Id || undefined;
+  // Only versions still to be downloaded: the list opens rather than starting one.
+  const onlyToDownload =
+    !sourceId &&
+    !!listed.data &&
+    !automaticSources(listed.data).length &&
+    playableSources(listed.data).length > 0;
+  React.useEffect(() => {
+    if (onlyToDownload && fetched.data)
+      navigate(versionsPath(fetched.data), { replace: true });
+  }, [onlyToDownload, fetched.data]);
   const info = usePlaybackInfo(itemId, {
     sourceId: named,
     enabled: !local && !!named,

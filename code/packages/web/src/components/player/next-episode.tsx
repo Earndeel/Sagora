@@ -21,7 +21,10 @@ import {
   listVersionsFromPlayer,
   playOn as moveOn,
 } from '../../lib/playback/session';
-import { playableSources } from '../../lib/playback/play';
+import {
+  automaticSources,
+  playableSources,
+} from '../../lib/playback/play';
 import { playerUrl, requiredHeaders } from '../../lib/playback/stream';
 import { useFindDownloaded } from '../../lib/downloads';
 import {
@@ -249,7 +252,7 @@ export function useUpNextPrompt({
         const info = await queryClient.fetchQuery(infoOptions(target.Id!));
         if (wanted.current !== key) return true;
         leaving.current = true;
-        const version = carryOn(playableSources(info), source, fallbackFirst);
+        const version = carryOn(automaticSources(info), source, fallbackFirst);
         if (version) go(version.Id!);
         else listVersionsFromPlayer(versionsPath(target, playlist));
         return true;
