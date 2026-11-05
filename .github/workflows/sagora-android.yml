@@ -1,8 +1,8 @@
 name: Sagora Android
 
-# Construit l'appli Android Sagora (branche famille + ce fichier) : APK signés avec la clé de Sagora
-# (secrets SAGORA_KEYSTORE_BASE64 / SAGORA_KEYSTORE_PASSWORD, Bitwarden « Sagora · Android signature »).
-# Lancé à la main ; la VM récupère l'artefact et le sert à https://stremio.walter-ai.cloud/sagora-app/android.
+# Construit l'appli Android Sagora (branche famille + ce fichier), NON signée : la VM récupère l'artefact, le signe
+# avec la clé de Sagora (Bitwarden « Sagora · Android signature », jamais envoyée ici) et le sert à
+# https://stremio.walter-ai.cloud/sagora-app/android. Lancé à la main.
 on:
   workflow_dispatch:
     inputs:
@@ -44,34 +44,20 @@ jobs:
           yes | "$sdkmanager" --licenses >/dev/null
           pinned() { sed -n "s/^$1 = \"\(.*\)\"/\1/p" packages/android/gradle/libs.versions.toml; }
           "$sdkmanager" --install "platforms;android-37.2" "ndk;$(pinned android-ndk)" "cmake;$(pinned android-cmake)" >/dev/null
-      - name: Build
+      - name: Build (non signé : la VM signe avec la clé de Sagora, qui ne quitte pas Bitwarden)
         working-directory: packages/android
         env:
-          KEYSTORE_BASE64: ${{ secrets.SAGORA_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SAGORA_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: sagora
-          ANDROID_KEY_PASSWORD: ${{ secrets.SAGORA_KEYSTORE_PASSWORD }}
           VERSION: ${{ inputs.version }}
         run: |
-          [ -n "$KEYSTORE_BASE64" ] || { echo "::error::SAGORA_KEYSTORE_BASE64 manquant"; exit 1; }
-          export ANDROID_KEYSTORE="$RUNNER_TEMP/release.keystore"
-          echo "$KEYSTORE_BASE64" | base64 -d >"$ANDROID_KEYSTORE"
           code=$(( ($(date -u +%s) - 1704067200) / 60 ))
           ./gradlew --no-configuration-cache :app:assembleRelease \
             -Paiostreams.version="$VERSION" -Paiostreams.versionCode="$code"
           mkdir -p out
-          apks='{}'
           for abi in arm64-v8a armeabi-v7a x86_64; do
-            name="sagora-android-$abi.apk"
-            cp "app/build/outputs/apk/release/app-$abi-release.apk" "out/$name"
-            apks=$(jq --arg abi "$abi" --arg name "$name" \
-              --arg sha256 "$(sha256sum "out/$name" | cut -d' ' -f1)" \
-              --argjson size "$(stat -c %s "out/$name")" \
-              '.[$abi] = {name: $name, sha256: $sha256, size: $size}' <<<"$apks")
+            cp "app/build/outputs/apk/release/app-$abi-release-unsigned.apk" "out/sagora-android-$abi-unsigned.apk"
           done
-          jq -n --arg version "$VERSION" --argjson code "$code" --argjson apks "$apks" \
-            '{version: $version, versionCode: $code, apks: $apks}' >out/update.json
-          cat out/update.json
+          jq -n --arg version "$VERSION" --argjson code "$code" '{version: $version, versionCode: $code}' >out/build.json
+          cat out/build.json
       - uses: actions/upload-artifact@v7
         with:
           name: sagora-android
