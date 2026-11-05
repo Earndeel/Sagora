@@ -1,11 +1,12 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
-import { LuVolume2, LuVolumeX } from 'react-icons/lu';
+import { LuPlay, LuVolume2, LuVolumeX, LuX } from 'react-icons/lu';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useItem } from '../lib/queries';
 import { settings, useSetting } from '../lib/settings';
 import { trailersOf, useTrailerPlayback } from '../lib/playback/trailers';
 import {
+  registerTeaserScreen,
   setSounding,
   teasersAllowed,
   useSounding,
@@ -31,6 +32,11 @@ const EMBED_W = 1920;
 const EMBED_H = 1080;
 /** Enlarged past the box to keep the player's edges out of sight. */
 const EMBED_OVERSCAN = 1.2;
+/** The sound rises over this once the teaser shows, never as the page opens. */
+const FADE_IN_MS = 3000;
+/** Full screen, asked for with a click: the sound comes quickly. */
+const FULL_FADE_IN_MS = 600;
+const FADE_STEPS = 20;
 
 /**
  * A title's first trailer, muted, over its artwork once it has played for a
@@ -69,6 +75,15 @@ export function Teaser({
   const [index, setIndex] = React.useState(0);
   const trailer = trailers[index];
   const [over, setOver] = React.useState(false);
+  // Full screen from the trailer button: the same player, carrying on.
+  const screen = React.useRef<HTMLDivElement | null>(null);
+  const [full, setFull] = React.useState(false);
+  React.useEffect(() => {
+    const follow = () =>
+      setFull(!!screen.current && document.fullscreenElement === screen.current);
+    document.addEventListener('fullscreenchange', follow);
+    return () => document.removeEventListener('fullscreenchange', follow);
+  }, []);
   // A trailer its owner keeps off other sites gives way to the next one.
   const refused = React.useCallback(() => {
     if (index + 1 < Math.min(trailers.length, MAX_TRIES)) setIndex(index + 1);
@@ -76,7 +91,7 @@ export function Teaser({
   }, [index, trailers.length]);
   const turn = useTeaserTurn(
     teaserKey,
-    enabled && allowed && active && !!trailer && !over,
+    enabled && allowed && (active || full) && !!trailer && !over,
     priority
   );
   const [due, setDue] = React.useState(false);
@@ -119,6 +134,14 @@ export function Teaser({
       latest.current.onPlaying?.(false);
       latest.current.onLoading?.(false);
       setSounding(teaserKey, false);
+      registerTeaserScreen(teaserKey, null);
+    },
+    [teaserKey]
+  );
+  const attach = React.useCallback(
+    (el: HTMLDivElement | null) => {
+      screen.current = el;
+      registerTeaserScreen(teaserKey, el);
     },
     [teaserKey]
   );
@@ -128,20 +151,26 @@ export function Teaser({
   const events = {
     onPlaying: () => setPlaying(true),
     onEnded: () => {
+      if (document.fullscreenElement === screen.current)
+        void document.exitFullscreen().catch(() => undefined);
       setPlaying(false);
       setOver(true);
       latest.current.onEnded?.();
     },
     onFailed: refused,
+    full,
   };
   return (
     <div
-      aria-hidden
+      ref={attach}
+      aria-hidden={!full}
       data-ui="teaser"
       data-playing={playing || undefined}
+      data-full={full || undefined}
       className={cn(
         'pointer-events-none absolute inset-0 overflow-hidden [container-type:size]',
         'opacity-0 transition-opacity duration-700 ease-out data-[playing]:opacity-100',
+        'data-[full]:pointer-events-auto data-[full]:bg-black data-[full]:opacity-100',
         className
       )}
     >
@@ -158,6 +187,61 @@ interface TeaserEvents {
   onPlaying(): void;
   onEnded(): void;
   onFailed(): void;
+  /** Full screen: whole picture, sound on, its own pause and close. */
+  full: boolean;
+}
+
+/** Raises a volume from where it is to 100 in steps; returns the stop. */
+function fadeIn(
+  from: number,
+  ms: number,
+  set: (volume: number) => void
+): () => void {
+  let volume = from;
+  const step = Math.max(1, (100 - from) / FADE_STEPS);
+  set(volume);
+  const timer = setInterval(() => {
+    volume = Math.min(100, volume + step);
+    set(volume);
+    if (volume >= 100) clearInterval(timer);
+  }, ms / FADE_STEPS);
+  return () => clearInterval(timer);
+}
+
+/** Over a full-screen teaser: a click pauses or resumes, and a close button. */
+function FullControls({
+  paused,
+  onToggle,
+}: {
+  paused: boolean;
+  onToggle(): void;
+}) {
+  return (
+    <div
+      data-ui="teaser-full-controls"
+      className="absolute inset-0 z-[1] cursor-pointer"
+      onClick={onToggle}
+    >
+      {paused && (
+        <span className="absolute left-1/2 top-1/2 flex size-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-4xl text-white">
+          <LuPlay />
+        </span>
+      )}
+      <button
+        type="button"
+        data-ui="teaser-full-close"
+        aria-label={t`Close`}
+        title={t`Close`}
+        onClick={(e) => {
+          e.stopPropagation();
+          void document.exitFullscreen().catch(() => undefined);
+        }}
+        className="absolute end-6 top-6 flex size-11 items-center justify-center rounded-full border border-white/40 bg-black/40 text-xl text-white backdrop-blur-sm hover:border-white hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--ring]"
+      >
+        <LuX />
+      </button>
+    </div>
+  );
 }
 
 // Covers its box like the artwork, a little enlarged to keep the player's
@@ -170,12 +254,16 @@ function YouTubeTeaser({
   onPlaying,
   onEnded,
   onFailed,
+  full,
 }: { id: string } & TeaserEvents) {
   const frame = React.useRef<HTMLIFrameElement>(null);
   const box = React.useRef<HTMLDivElement>(null);
   const [scale, setScale] = React.useState(0);
   const [muted] = useTeaserMuted();
   const [heard, setHeard] = React.useState(false);
+  const [revealed, setRevealed] = React.useState(false);
+  const [paused, setPaused] = React.useState(false);
+  const volume = React.useRef(0);
   const latest = React.useRef({ onPlaying, onEnded, onFailed, muted });
   latest.current = { onPlaying, onEnded, onFailed, muted };
   // What the player last reported, and whether the teaser has been shown.
@@ -185,22 +273,24 @@ function YouTubeTeaser({
     quality: '',
     shown: false,
     failed: false,
+    captionsOff: false,
   });
 
-  // Laid out at 1920×1080 whatever the box, then scaled down to cover it.
+  // Laid out at 1920×1080 whatever the box, then scaled down to cover it,
+  // or full screen to show the whole picture.
   React.useLayoutEffect(() => {
     const el = box.current;
     if (!el) return;
-    const fit = () =>
-      setScale(
-        Math.max(el.clientWidth / EMBED_W, el.clientHeight / EMBED_H) *
-          EMBED_OVERSCAN
-      );
+    const fit = () => {
+      const w = el.clientWidth / EMBED_W;
+      const h = el.clientHeight / EMBED_H;
+      setScale(full ? Math.min(w, h) : Math.max(w, h) * EMBED_OVERSCAN);
+    };
     fit();
     const observer = new ResizeObserver(fit);
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [full]);
 
   const post = React.useCallback(
     (message: object) => {
@@ -245,9 +335,16 @@ function YouTubeTeaser({
       if (typeof info.currentTime === 'number') now.time = info.currentTime;
       if (info.playbackQuality) now.quality = info.playbackQuality;
       if (data.event === 'onReady') {
-        if (!latest.current.muted) command('unMute');
+        // Silent until it shows; the sound then rises (below).
+        command('mute');
         command('setPlaybackQuality', ['hd1080']);
+      }
+      // Captions load with playback, so they are taken off once it starts.
+      if (state === 1 && !now.captionsOff) {
+        now.captionsOff = true;
         command('unloadModule', ['captions']);
+        command('unloadModule', ['cc']);
+        command('setOption', ['captions', 'track', {}]);
       }
       if (data.event === 'onError') latest.current.onFailed();
       // A trailer that exists only below 720p gives way to the next one.
@@ -268,8 +365,11 @@ function YouTubeTeaser({
         HD_QUALITIES.has(now.quality)
       ) {
         now.shown = true;
+        setRevealed(true);
         latest.current.onPlaying();
       }
+      if (state === 1) setPaused(false);
+      if (state === 2) setPaused(true);
       if (state === 0) latest.current.onEnded();
     };
     addEventListener('message', receive);
@@ -283,9 +383,20 @@ function YouTubeTeaser({
     return () => clearInterval(timer);
   }, [heard, post]);
 
+  // Sound only once the teaser shows (or full screen), rising rather than all at once.
+  const audible = heard && (full || (revealed && !muted));
   React.useEffect(() => {
-    if (heard) command(muted ? 'mute' : 'unMute');
-  }, [muted, heard, command]);
+    if (!audible) {
+      if (heard) command('mute');
+      volume.current = 0;
+      return;
+    }
+    command('unMute');
+    return fadeIn(volume.current, full ? FULL_FADE_IN_MS : FADE_IN_MS, (v) => {
+      volume.current = v;
+      command('setVolume', [Math.round(v)]);
+    });
+  }, [audible, full, heard, command]);
 
   const origin = encodeURIComponent(location.origin);
   return (
@@ -308,6 +419,12 @@ function YouTubeTeaser({
           className="absolute left-1/2 top-1/2 max-w-none border-0"
         />
       )}
+      {full && (
+        <FullControls
+          paused={paused}
+          onToggle={() => command(paused ? 'playVideo' : 'pauseVideo')}
+        />
+      )}
     </div>
   );
 }
@@ -317,22 +434,61 @@ function VideoTeaser({
   onPlaying,
   onEnded,
   onFailed,
+  full,
 }: { url: string } & TeaserEvents) {
+  const video = React.useRef<HTMLVideoElement>(null);
   const [muted] = useTeaserMuted();
+  const [revealed, setRevealed] = React.useState(false);
+  const [paused, setPaused] = React.useState(false);
+  const audible = full || (revealed && !muted);
+  React.useEffect(() => {
+    const el = video.current;
+    if (!el) return;
+    if (!audible) {
+      el.muted = true;
+      el.volume = 0;
+      return;
+    }
+    el.muted = false;
+    return fadeIn(el.volume * 100, full ? FULL_FADE_IN_MS : FADE_IN_MS, (v) => {
+      el.volume = v / 100;
+    });
+  }, [audible, full]);
   return (
-    <video
-      data-ui="teaser-video"
-      src={url}
-      muted={muted}
-      autoPlay
-      playsInline
-      preload="auto"
-      disablePictureInPicture
-      onPlaying={onPlaying}
-      onEnded={onEnded}
-      onError={onFailed}
-      className={cn(COVER, 'object-cover')}
-    />
+    <>
+      <video
+        ref={video}
+        data-ui="teaser-video"
+        src={url}
+        muted
+        autoPlay
+        playsInline
+        preload="auto"
+        disablePictureInPicture
+        onPlaying={() => {
+          setRevealed(true);
+          setPaused(false);
+          onPlaying();
+        }}
+        onPause={() => setPaused(true)}
+        onEnded={onEnded}
+        onError={onFailed}
+        className={
+          full
+            ? 'absolute inset-0 h-full w-full object-contain'
+            : cn(COVER, 'object-cover')
+        }
+      />
+      {full && (
+        <FullControls
+          paused={paused}
+          onToggle={() => {
+            const el = video.current;
+            if (el) void (el.paused ? el.play() : el.pause());
+          }}
+        />
+      )}
+    </>
   );
 }
 

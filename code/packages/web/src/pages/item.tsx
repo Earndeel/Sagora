@@ -748,7 +748,7 @@ function SecondaryActions({
     <>
       {offered.trailer && (
         <Captioned ui={caption} name="trailer" label={t`Trailer`}>
-          <TrailerButton item={item} compact={!!caption} />
+          <TrailerButton item={item} compact={!!caption} teaserKey="item" />
         </Captioned>
       )}
       {offered.random && (

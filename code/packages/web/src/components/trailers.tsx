@@ -15,14 +15,18 @@ import {
   youTubeId,
   type Trailer,
 } from '../lib/playback/trailers';
+import { expandTeaser } from '../lib/teaser';
 import type { BaseItemDto } from '../lib/types';
 
 export function TrailerButton({
   item,
   compact,
+  teaserKey,
 }: {
   item: BaseItemDto;
   compact?: boolean;
+  /** The page's teaser, which goes full screen where it is instead of starting over. */
+  teaserKey?: string;
 }) {
   const trailers = React.useMemo(() => trailersOf(item), [item]);
   const [listing, setListing] = React.useState(false);
@@ -31,7 +35,11 @@ export function TrailerButton({
   const play = (index: number) => navigate(to.trailer(item.Id!, index));
   const count = trailers.length;
   const label = plural(count, { one: 'Trailer', other: 'Trailers' });
-  const open = () => (trailers.length > 1 ? setListing(true) : play(0));
+  const open = () => {
+    if (teaserKey && expandTeaser(teaserKey)) return;
+    if (trailers.length > 1) setListing(true);
+    else play(0);
+  };
   return (
     <>
       {compact ? (

@@ -69,6 +69,27 @@ export function setSounding(key: string | null, playing: boolean) {
 export const useSounding = () =>
   React.useSyncExternalStore(subscribe, () => sounding);
 
+/* The element of each mounted teaser, so a trailer button can take it full screen. */
+const screens = new Map<string, HTMLElement>();
+
+export function registerTeaserScreen(key: string, el: HTMLElement | null) {
+  if (el) screens.set(key, el);
+  else screens.delete(key);
+}
+
+/**
+ * Takes `key`'s playing teaser full screen, where it carries on with its
+ * sound. Called from the click itself, which the browser requires; false when
+ * there is nothing playing to expand or the device cannot.
+ */
+export function expandTeaser(key: string): boolean {
+  const el = screens.get(key);
+  if (!el || sounding !== key || typeof el.requestFullscreen !== 'function')
+    return false;
+  el.requestFullscreen().catch(() => undefined);
+  return true;
+}
+
 /** What the device asks for: less motion and less data mean no teasers. */
 export function teasersAllowed(): boolean {
   if (typeof matchMedia === 'function') {
