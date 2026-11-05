@@ -11,7 +11,7 @@ export function BrandLogo({ className }: { className?: string }) {
     <CachedImage
       data-ui="brand-logo"
       src={logo && !failed ? logo : __STANDALONE__ ? './logo.png' : '/logo.png'}
-      alt={name ?? 'AIOStreams'}
+      alt={name ?? 'Sagora'}
       onError={() => setFailed(true)}
       className={className}
     />

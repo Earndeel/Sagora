@@ -394,7 +394,7 @@ export function ServersPage({
   const [servers, setServers] = React.useState(savedServers);
   const [adding, setAdding] = React.useState(servers.length === 0 || !!address);
   React.useEffect(() => {
-    document.title = 'AIOStreams';
+    document.title = 'Sagora';
   }, []);
 
   const [target, setTarget] = React.useState<SavedServer | null>(null);
