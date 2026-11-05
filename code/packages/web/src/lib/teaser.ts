@@ -78,14 +78,13 @@ export function registerTeaserScreen(key: string, el: HTMLElement | null) {
 }
 
 /**
- * Takes `key`'s playing teaser full screen, where it carries on with its
- * sound. Called from the click itself, which the browser requires; false when
- * there is nothing playing to expand or the device cannot.
+ * Takes `key`'s teaser full screen, where it carries on with its sound, even
+ * one still getting ready out of sight. Called from the click itself, which
+ * the browser requires; false when there is none or the device cannot.
  */
 export function expandTeaser(key: string): boolean {
   const el = screens.get(key);
-  if (!el || sounding !== key || typeof el.requestFullscreen !== 'function')
-    return false;
+  if (!el || typeof el.requestFullscreen !== 'function') return false;
   el.requestFullscreen().catch(() => undefined);
   return true;
 }

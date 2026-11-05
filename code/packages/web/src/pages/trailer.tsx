@@ -8,7 +8,10 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '../lib/session';
 import { useItem } from '../lib/queries';
 import { currentHost } from '../lib/hosts';
-import { usePlayerFullscreen } from '../lib/playback/fullscreen';
+import {
+  leaveTrailerFullscreen,
+  usePlayerFullscreen,
+} from '../lib/playback/fullscreen';
 import { usePlayer } from '../lib/playback/use-player';
 import { videoEngine } from '../lib/playback/video';
 import { useAction } from '../lib/input';
@@ -50,6 +53,8 @@ export function TrailerPage({
   usePlayerFullscreen(!host.player || !!host.fullscreen);
   // The one player can't play both.
   React.useEffect(closePlayback, []);
+  // The trailer button's full screen ends with the trailer.
+  React.useEffect(() => leaveTrailerFullscreen, []);
   const trailers = item.data ? trailersOf(item.data) : [];
   const trailer = trailers[index];
   const playback = useTrailerPlayback(trailer?.url);

@@ -264,8 +264,8 @@ function YouTubeTeaser({
   const [revealed, setRevealed] = React.useState(false);
   const [paused, setPaused] = React.useState(false);
   const volume = React.useRef(0);
-  const latest = React.useRef({ onPlaying, onEnded, onFailed, muted });
-  latest.current = { onPlaying, onEnded, onFailed, muted };
+  const latest = React.useRef({ onPlaying, onEnded, onFailed, muted, full });
+  latest.current = { onPlaying, onEnded, onFailed, muted, full };
   // What the player last reported, and whether the teaser has been shown.
   const report = React.useRef({
     state: -1,
@@ -352,17 +352,19 @@ function YouTubeTeaser({
       if (
         !now.shown &&
         !now.failed &&
+        !latest.current.full &&
         levels.length &&
         !levels.some((level) => HD_QUALITIES.has(level))
       ) {
         now.failed = true;
         latest.current.onFailed();
       }
+      // Full screen was asked for: it shows as soon as it plays.
       if (
         !now.shown &&
         now.state === 1 &&
-        now.time >= CHROME_HIDDEN_S &&
-        HD_QUALITIES.has(now.quality)
+        (latest.current.full ||
+          (now.time >= CHROME_HIDDEN_S && HD_QUALITIES.has(now.quality)))
       ) {
         now.shown = true;
         setRevealed(true);

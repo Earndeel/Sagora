@@ -34,6 +34,24 @@ export function leaveFullscreen(): void {
   else leaveWindowFullscreen();
 }
 
+/** Full screen asked for by the trailer button, left again with the trailer. */
+let forTrailer = false;
+
+/** From the click itself, which the browser requires. */
+export function enterTrailerFullscreen(): void {
+  if (isFullscreen()) return;
+  forTrailer = true;
+  void enterFullscreen().catch(() => {
+    forTrailer = false;
+  });
+}
+
+export function leaveTrailerFullscreen(): void {
+  if (!forTrailer) return;
+  forTrailer = false;
+  if (isFullscreen()) void exitFullscreen().catch(() => {});
+}
+
 export function toggleDocumentFullscreen(): void {
   void (isFullscreen() ? exitFullscreen() : enterFullscreen()).catch(() => {});
 }
