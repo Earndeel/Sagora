@@ -1,6 +1,6 @@
 import React from 'react';
 import { currentHost } from '../lib/hosts';
-import { navigate } from '../lib/paths';
+import { appPathOf, navigate } from '../lib/paths';
 
 /**
  * A link whose address sits in `data-href` on TVs, as the web view watches
@@ -22,7 +22,8 @@ export const Anchor = React.forwardRef<
       onClick={(e) => {
         onClick?.(e);
         if (e.defaultPrevented) return;
-        if (href.startsWith('#/')) navigate(href.slice(1));
+        const path = appPathOf(href);
+        if (path) navigate(path);
         else window.open(href, props.target ?? '_self');
       }}
     />

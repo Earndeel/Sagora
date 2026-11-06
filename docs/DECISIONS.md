@@ -20,6 +20,8 @@ Ce qui fait règle pour Sagora, avec sa date. Une décision plus récente rempla
 | 2026-11-06 | **L'adresse devient https://sagora.walter-ai.cloud** (« remplacer stremio.walter-ai.cloud par sagora.walter-ai.cloud »). L'ancienne adresse reste servie pour les appareils déjà réglés. |
 | 2026-11-06 | **Connexion « Lucas »** avec le mot de passe choisi par Monsieur (mot de passe de toute la configuration Famille, dans Bitwarden). |
 | 2026-11-06 | **Sagora à la racine du site** : pas de `/jellyfin` ni `/stremio` dans l'adresse (« c'est pas élégant ni intégré ») ; ce sont des adresses techniques des applis et addons. |
+| 2026-11-06 | **Adresses propres** (« oui rend ça clean ») : chaque page a sa vraie adresse, sans `#/` (`sagora.walter-ai.cloud/item/…`). Les applis gardent le `#`, invisible. |
+| 2026-11-06 | **Pas d'icône de son sur le bandeau d'accueil.** |
 
 ## Sources, TorBox et trackers
 

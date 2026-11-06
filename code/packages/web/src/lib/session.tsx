@@ -14,7 +14,7 @@ import { settings, syncPreferences } from './settings';
 import { useLatest } from './use-latest';
 import { forgetSavedUser, forgetUser, savedUser, saveUser } from './cache';
 import { watchServer } from './connection';
-import { startOver, to } from './paths';
+import { currentPath, startOver, to } from './paths';
 import type {
   AuthenticationResult,
   Branding,
@@ -352,7 +352,7 @@ export function useSessionPhase(base: string) {
       if (
         !away ||
         phase.kind !== 'ready' ||
-        location.hash.startsWith('#/play/')
+        currentPath().startsWith('/play/')
       )
         return;
       void askWho(phase.client, false).then(

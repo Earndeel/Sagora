@@ -691,10 +691,6 @@ export function Hero({
         </div>
       ))}
 
-      <TeaserSoundButton
-        teaserKey="hero"
-        className="absolute end-4 top-[calc(var(--top-bar,0px)+1rem)] z-[2] lg:end-10"
-      />
       {featured.length > 1 && (
         <div
           data-ui="hero-dots"

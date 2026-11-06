@@ -1,5 +1,6 @@
 import { t } from '@lingui/core/macro';
 import { toast } from 'sonner';
+import { currentPath } from '../../lib/paths';
 import { useHeldInvites } from '../../lib/party/actions';
 import { usePartyFollow } from '../../lib/party/follow';
 import { usePartyEvent } from '../../lib/party/party';
@@ -10,7 +11,7 @@ import {
   usePartySheetOpen,
 } from './party-sheet';
 
-const onPlayer = () => /^#\/play\//.test(window.location.hash);
+const onPlayer = () => currentPath().startsWith('/play/');
 
 /** What a party needs whatever page is open. Once, in the layout. */
 export function PartyHost() {

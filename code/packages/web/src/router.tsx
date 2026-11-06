@@ -2,6 +2,7 @@ import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import {
+  createBrowserHistory,
   createHashHistory,
   createRootRoute,
   createRoute,
@@ -9,7 +10,13 @@ import {
   Outlet,
 } from '@tanstack/react-router';
 import { PageMessage, WebLayout } from './components/layout';
-import { navigate, setNavigator, to } from './lib/paths';
+import {
+  appPathOf,
+  navigate,
+  pathRouting,
+  setNavigator,
+  to,
+} from './lib/paths';
 import { lastCatalog } from './lib/settings';
 import { DiscoverIndex, DiscoverPage } from './pages/discover';
 import { FavouritesPage } from './pages/favourites';
@@ -264,12 +271,25 @@ function NotFoundPage(): React.ReactElement {
   );
 }
 
+// An old address with the page in its hash (…/#/item/x) opens at the page's own address,
+// on load and when only the hash changes on a page already open.
+if (pathRouting() && window.location.hash.startsWith('#/')) {
+  window.history.replaceState(null, '', window.location.hash.slice(1));
+}
+
 export const webRouter = createRouter({
   routeTree,
   defaultNotFoundComponent: NotFoundPage,
-  history: createHashHistory(),
+  history: pathRouting() ? createBrowserHistory() : createHashHistory(),
   scrollRestoration: true,
 });
+
+if (pathRouting()) {
+  addEventListener('hashchange', () => {
+    if (window.location.hash.startsWith('#/'))
+      navigate(window.location.hash.slice(1), { replace: true });
+  });
+}
 
 setNavigator((path, { replace, keepScroll }) => {
   if (keepScroll)
@@ -318,8 +338,10 @@ async function goToFirstEntry(path: string) {
 document.addEventListener('click', (e) => {
   if (e.defaultPrevented || e.button !== 0) return;
   if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-  const anchor = (e.target as Element | null)?.closest?.('a[href^="#/"]');
+  const anchor = (e.target as Element | null)?.closest?.('a[href]');
   if (!anchor || anchor.getAttribute('target')) return;
+  const path = appPathOf(anchor.getAttribute('href')!);
+  if (!path) return;
   e.preventDefault();
-  navigate(anchor.getAttribute('href')!.slice(1));
+  navigate(path);
 });

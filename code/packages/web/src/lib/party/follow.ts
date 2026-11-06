@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import type { JellyfinClient } from '../client';
 import { currentHost } from '../hosts';
-import { navigate, to } from '../paths';
+import { currentPath, navigate, to } from '../paths';
 import {
   closePlayback,
   playbackNow,
@@ -110,7 +110,7 @@ function sitOut(entry: PartyEntry, message: string): void {
   changed();
 }
 
-const onPlayer = () => /^#\/play\//.test(window.location.hash);
+const onPlayer = () => currentPath().startsWith('/play/');
 
 /** The player, on its page or in the mini player, if it plays this version. */
 function playingNow(itemId: string, sourceId: string): boolean {

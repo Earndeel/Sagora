@@ -122,10 +122,13 @@ function listen() {
     layout++;
     measureSoon();
   });
-  addEventListener('hashchange', () => {
-    layout++;
-    measureSoon();
-  });
+  // A page change: the hash in the apps, the history on the website.
+  for (const type of ['hashchange', 'popstate']) {
+    addEventListener(type, () => {
+      layout++;
+      measureSoon();
+    });
+  }
   new ResizeObserver(() => {
     layout++;
     measureSoon();

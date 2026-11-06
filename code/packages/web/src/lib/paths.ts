@@ -1,10 +1,36 @@
 import type { ServerInfo } from './server-info';
 import type { BaseItemDto } from './types';
+import { currentHost } from './hosts';
 
 /*
  * The app routes on the URL hash, like jellyfin-web, so it works under any
- * mount of the API.
+ * mount of the API. Sagora: on the website, served at the root of its own
+ * address, pages have real paths instead (sagora.walter-ai.cloud/item/…). The
+ * apps load the interface from a file, and the server's /jellyfin/web page can
+ * sit under any mount, so they keep the hash.
  */
+const WEB_MOUNT = /\/web(\/(index\.html)?)?$/i;
+
+/** The pages of the app, which the site serves at their own address. */
+export const APP_PATH =
+  /^\/(history|downloads|favourites|calendar|settings|search|discover|item|person|play)?(\/|\?|$)/;
+
+let routingOnPaths: boolean | undefined;
+
+/** True on the website at the root of its address; decided once, at load. */
+export function pathRouting(): boolean {
+  return (routingOnPaths ??=
+    currentHost().name === 'browser' &&
+    /^https?:$/.test(window.location.protocol) &&
+    !WEB_MOUNT.test(window.location.pathname));
+}
+
+/** The in-app path on screen, as `/play/x?source=…`. */
+export function currentPath(): string {
+  return pathRouting()
+    ? window.location.pathname + window.location.search
+    : window.location.hash.slice(1) || '/';
+}
 
 export const to = {
   home: '/',
@@ -59,7 +85,13 @@ export function versionsPath(
   return `${path}${path.includes('?') ? '&' : '?'}pick=${item.Id}${playlist ? `&playlist=${playlist}` : ''}`;
 }
 
-export const href = (path: string) => `#${path}`;
+export const href = (path: string) => (pathRouting() ? path : `#${path}`);
+
+/** The in-app path an `href` of this app names, or null for any other link. */
+export function appPathOf(link: string): string | null {
+  if (link.startsWith('#/')) return link.slice(1);
+  return pathRouting() && APP_PATH.test(link) ? link : null;
+}
 
 /** The server's configuration page, when it has one. */
 /** The server's own when it names one; the hosting server's page otherwise. */
@@ -77,13 +109,14 @@ interface NavigateOptions {
 type Push = (path: string, opts: NavigateOptions) => void;
 type Restart = (path: string) => Promise<void>;
 
-let push: Push = (path) => {
-  window.location.hash = path;
+const open = (path: string) => {
+  if (pathRouting()) window.location.assign(path);
+  else window.location.hash = path;
 };
 
-let restart: Restart = async (path) => {
-  window.location.hash = path;
-};
+let push: Push = (path) => open(path);
+
+let restart: Restart = async (path) => open(path);
 
 export function setNavigator(fn: Push, fresh: Restart): void {
   push = fn;

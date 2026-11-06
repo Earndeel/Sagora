@@ -89,6 +89,9 @@ Ensuite :
   deux raccourcis d'AIOStreams qui, avec un alias, ouvraient l'addon ou les profils **sans mot de passe** sont fermés.
 - « Pourquoi /jellyfin ou /stremio ? C'est pas élégant ni intégré » → **Sagora s'ouvre à la racine,
   https://sagora.walter-ai.cloud/** ; `/jellyfin` et `/stremio` restent invisibles, pour les applis et les addons.
+- « Oui rend ça clean » → plus de `#/` : chaque page a sa propre adresse (`/item/…`, `/search`…). Icône de son retirée
+  du bandeau d'accueil. Le résumé du bandeau restait en français pour Lucas (interface en anglais) : la connexion
+  démarre dans la langue du navigateur et ces requêtes-là n'étaient pas refaites → corrigé.
 
 ## Ouvert
 

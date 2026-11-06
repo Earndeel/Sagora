@@ -1,7 +1,7 @@
 import React from 'react';
 import { currentHost } from '../hosts';
 import { appBridge } from '../hosts/shell/bridge';
-import { goBack, goBackInApp, navigate, to } from '../paths';
+import { currentPath, goBack, goBackInApp, navigate, to } from '../paths';
 import { settings } from '../settings';
 
 /** The title the player plays, which plays on in the mini player while pages open over it. */
@@ -32,7 +32,7 @@ export const usePlayback = () =>
 
 export const playbackNow = () => current;
 
-const onPlayerPage = () => /^#\/play\/(?!trailer\/)/.test(window.location.hash);
+const onPlayerPage = () => /^\/play\/(?!trailer\/)/.test(currentPath());
 
 /** Apps that can draw their video small over the page, and the page's own video. */
 export function canMinimise(): boolean {

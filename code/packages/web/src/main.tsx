@@ -53,7 +53,9 @@ for (const el of [container, document.body]) {
 let shownLocale = '';
 i18n.on('change', () => {
   if (shownLocale && i18n.locale !== shownLocale) {
-    void queryClient.invalidateQueries();
+    // A request still on its way (signing in starts in the browser's language) would otherwise keep its answer in
+    // the old language: the refetch joins a fetch that has no data yet instead of replacing it.
+    void queryClient.cancelQueries().then(() => queryClient.invalidateQueries());
   }
   shownLocale = i18n.locale;
 });

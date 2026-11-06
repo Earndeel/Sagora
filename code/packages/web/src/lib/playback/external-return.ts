@@ -3,7 +3,7 @@ import React from 'react';
 import { useRouterState } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { currentHost } from '../hosts';
-import { itemPath } from '../paths';
+import { itemPath, pathRouting } from '../paths';
 import { PlaybackReporter } from './reporter';
 import { useRefreshAll } from '../queries';
 import { useSession } from '../session';
@@ -56,12 +56,19 @@ export function useExternalReturn() {
     // A player that played to the end may not say where that was.
     const finished = read('finished') === '1';
 
-    for (const key of MARKS) inHash.delete(key);
+    for (const key of MARKS) {
+      inHash.delete(key);
+      query.delete(key);
+    }
     const rest = inHash.toString();
+    // On the website the page is the path itself, so the marks come off its own query.
+    const left = query.toString();
     window.history.replaceState(
       null,
       '',
-      `${window.location.pathname}${hashPath}${rest ? `?${rest}` : ''}`
+      pathRouting()
+        ? `${window.location.pathname}${left ? `?${left}` : ''}`
+        : `${window.location.pathname}${hashPath}${rest ? `?${rest}` : ''}`
     );
     if (finished) {
       void client
