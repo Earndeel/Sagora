@@ -1,0 +1,28 @@
+# Ce que le dépôt ne garde jamais : secrets, données de la famille, fichiers construits.
+# (code/ a ses propres .gitignore, ceux d'AIOStreams.)
+
+# Secrets, rendus depuis Bitwarden par production/render-secrets.sh
+production/secrets.env
+production/torznab-relay/relay.env
+*.p12
+*.jks
+*.keystore
+*.agekey
+
+# Données et état (base SQLite, caches, identifiants de configuration, Prowlarr, StremThru)
+production/data/
+production/state/
+production/prowlarr/
+production/stremthru/
+
+# Fichiers construits ou téléchargés
+production/web-dist/
+production/web-builds/
+production/front/app/
+production/android-app/tools/*.jar
+production/tests/out/
+*.apk
+*.idsig
+__pycache__/
+*.pyc
+.DS_Store
