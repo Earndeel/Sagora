@@ -88,7 +88,7 @@ import {
 import { ItemMenu } from '../components/item-menu';
 import { SeasonPills } from '../components/season-pills';
 import { RatingButton } from '../components/rating';
-import { Scores, scoresOf } from '../components/scores';
+import { Scores, scoresOf, cardScore } from '../components/scores';
 import { ExternalLinks } from '../components/external-links';
 import { CastAndCrew } from '../components/people';
 import { KINDS, KindTabs } from '../components/kind-tabs';
@@ -1410,6 +1410,7 @@ function SubCollections({ parent }: { parent: BaseItemDto }) {
             animated={animatedPosterOf(item)}
             title={item.Name ?? ''}
             subtitle={itemSubtitle(item)}
+            score={cardScore(item)}
             itemType={item.Type}
             watched={item.UserData?.Played}
             favourite={item.UserData?.IsFavorite}
@@ -1557,6 +1558,7 @@ function Similar({ itemId }: { itemId: string }) {
                 animated={animatedPosterOf(item)}
                 title={item.Name ?? ''}
                 subtitle={itemSubtitle(item)}
+                score={cardScore(item)}
                 itemType={item.Type}
                 watched={item.UserData?.Played}
                 favourite={item.UserData?.IsFavorite}

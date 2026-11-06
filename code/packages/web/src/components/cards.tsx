@@ -16,6 +16,7 @@ import { drawnRatio } from '../lib/images';
 import { settings, useSetting } from '../lib/settings';
 import { CachedImage } from './cached-image';
 import { Anchor } from './anchor';
+import { CardScore } from './scores';
 
 type Sources = string | string[] | null;
 
@@ -365,12 +366,43 @@ const SHAPE_CLASS: Record<CardShape, string> = {
   square: 'aspect-square',
 };
 
+/** A card's second line: its year or episode, then its score. */
+function SubtitleLine({
+  subtitle,
+  score,
+}: {
+  subtitle?: string;
+  score?: number;
+}) {
+  return (
+    <>
+      {subtitle}
+      {!!score && (
+        <>
+          {subtitle && (
+            <span
+              data-ui="meta-separator"
+              aria-hidden
+              className="mx-1.5 text-gray-500"
+            >
+              •
+            </span>
+          )}
+          <CardScore value={score} />
+        </>
+      )}
+    </>
+  );
+}
+
 export interface PosterCardProps {
   href: string;
   shape?: CardShape;
   image: ArtworkSource;
   title: string;
   subtitle?: string;
+  /** Out of ten, shown with a star beside the subtitle. */
+  score?: number;
   itemType?: string;
   watched?: boolean;
   favourite?: boolean;
@@ -401,7 +433,7 @@ function AnimatedPoster({ src }: { src: string }) {
 }
 
 export function PosterCard(props: PosterCardProps) {
-  const { href, image, title, subtitle, itemType, watched } = props;
+  const { href, image, title, subtitle, score, itemType, watched } = props;
   const { favourite, unwatched, progress } = props;
   const shape = props.shape ?? 'poster';
   // Mounted only while active, so a row of them decodes nothing at rest.
@@ -410,7 +442,7 @@ export function PosterCard(props: PosterCardProps) {
   const animated = props.animated && !still ? props.animated : undefined;
   const [lines] = useSetting(settings.interface.posterLines);
   const showTitle = lines.includes('title');
-  const showSubtitle = !!subtitle && lines.includes('year');
+  const showSubtitle = (!!subtitle || !!score) && lines.includes('year');
   return (
     <Anchor
       data-ui="poster-card"
@@ -476,7 +508,7 @@ export function PosterCard(props: PosterCardProps) {
               data-ui="poster-card-subtitle"
               className="truncate text-xs text-[--muted]"
             >
-              {subtitle}
+              <SubtitleLine subtitle={subtitle} score={score} />
             </p>
           )}
         </div>
@@ -491,6 +523,8 @@ export interface WideCardProps {
   image: ArtworkSource;
   title: string;
   subtitle?: string;
+  /** Out of ten, shown with a star beside the subtitle. */
+  score?: number;
   meta?: React.ReactNode;
   watched?: boolean;
   progress?: number | null;
@@ -513,6 +547,7 @@ export function WideCard(props: WideCardProps) {
     image,
     title,
     subtitle,
+    score,
     meta,
     watched,
     progress,
@@ -570,13 +605,13 @@ export function WideCard(props: WideCardProps) {
           >
             {title}
           </p>
-          {subtitle && (
+          {(subtitle || !!score) && (
             <p
               data-ui="wide-card-subtitle"
               className="truncate text-sm text-[--muted]"
               title={subtitle}
             >
-              {subtitle}
+              <SubtitleLine subtitle={subtitle} score={score} />
             </p>
           )}
         </div>

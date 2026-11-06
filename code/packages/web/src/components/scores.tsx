@@ -37,6 +37,32 @@ export function scoresOf(item: BaseItemDto): Score[] {
   ].filter((score) => !!score);
 }
 
+/**
+ * The one score a card shows beside its year, out of ten: IMDb's where the
+ * server has it, else the first it lists. None for an episode, whose line is
+ * its number rather than a date.
+ */
+export function cardScore(item: BaseItemDto): number | undefined {
+  if (item.Type === 'Episode') return undefined;
+  if (item.CommunityRating) return item.CommunityRating;
+  const first = scoresOf(item)[0];
+  return first ? (first.value / first.scale) * 10 : undefined;
+}
+
+/** A star and a score out of ten, as a card's line shows it. */
+export function CardScore({ value }: { value: number }) {
+  return (
+    <span data-ui="card-score" title={t`Rating`} className="whitespace-nowrap">
+      <BiSolidStar
+        aria-hidden
+        className="me-0.5 inline align-[-0.15em] text-[1.1em] text-yellow-400"
+      />
+      <span className="sr-only">{t`Rating`}</span>
+      {value.toFixed(1)}
+    </span>
+  );
+}
+
 interface Look {
   name: string;
   icon: ComponentType<{

@@ -7,6 +7,7 @@ import type { BaseItemDto } from '../lib/types';
 import { PosterCard } from './cards';
 import { ItemMenu } from './item-menu';
 import { CardGrid, fadeIn } from './media-row';
+import { cardScore } from './scores';
 
 /** Cards in the shape their art was made for; collections may be landscape. */
 export function MixedGrid({
@@ -44,6 +45,7 @@ export function MixedGrid({
               animated={animatedPosterOf(child)}
               title={child.Name ?? ''}
               subtitle={itemSubtitle(child)}
+              score={cardScore(child)}
               itemType={child.Type}
               watched={child.UserData?.Played}
               favourite={child.UserData?.IsFavorite}

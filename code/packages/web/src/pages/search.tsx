@@ -30,6 +30,7 @@ import { MediaRow } from '../components/media-row';
 import { PosterCard } from '../components/cards';
 import { ItemMenu } from '../components/item-menu';
 import { PeopleRow } from '../components/people';
+import { cardScore } from '../components/scores';
 
 const SUGGESTIONS = 5;
 
@@ -342,6 +343,7 @@ function ResultRow({
             animated={animatedPosterOf(item)}
             title={item.Name ?? ''}
             subtitle={itemSubtitle(item)}
+            score={cardScore(item)}
             itemType={item.Type}
             watched={item.UserData?.Played}
             favourite={item.UserData?.IsFavorite}

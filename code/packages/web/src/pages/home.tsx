@@ -54,6 +54,7 @@ import { FILL_WINDOW } from '../components/layout';
 import type { BaseItemDto } from '../lib/types';
 import { currentHost } from '../lib/hosts';
 import { Anchor } from '../components/anchor';
+import { cardScore } from '../components/scores';
 
 const HERO_ITEMS = 8;
 const HERO_MAX = 10;
@@ -264,6 +265,7 @@ function EpisodeRow({
               }
               title={itemTitle(item)}
               subtitle={itemSubtitle(item)}
+              score={cardScore(item)}
               meta={
                 left && progressOf(item) ? `${duration(left)} left` : undefined
               }
@@ -309,6 +311,7 @@ function UpcomingRow() {
             image={(width) => landscapeUrls(client, item, { maxWidth: width })}
             title={itemTitle(item)}
             subtitle={itemSubtitle(item)}
+            score={cardScore(item)}
             badge={
               item.PremiereDate ? (
                 <Badge size="sm" intent="gray-solid">
@@ -390,6 +393,7 @@ function LibraryRow({ view, first }: { view: BaseItemDto; first: boolean }) {
               animated={animatedPosterOf(item)}
               title={item.Name ?? ''}
               subtitle={itemSubtitle(item)}
+              score={cardScore(item)}
               itemType={item.Type}
               watched={item.UserData?.Played}
               favourite={item.UserData?.IsFavorite}

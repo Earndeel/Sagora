@@ -92,6 +92,8 @@ Ensuite :
 - « Oui rend ça clean » → plus de `#/` : chaque page a sa propre adresse (`/item/…`, `/search`…). Icône de son retirée
   du bandeau d'accueil. Le résumé du bandeau restait en français pour Lucas (interface en anglais) : la connexion
   démarre dans la langue du navigateur et ces requêtes-là n'étaient pas refaites → corrigé.
+- « Ajoute l'étoile et la note de l'œuvre à côté de la date » → sous chaque carte (affiches et cartes larges) :
+  `2008 • ★ 8.5`, la note IMDb sur 10 (sinon la première note connue) ; rien pour un épisode, dont la ligne est son numéro.
 
 ## Ouvert
 
