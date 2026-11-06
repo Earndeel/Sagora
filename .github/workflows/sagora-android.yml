@@ -1,0 +1,74 @@
+name: Sagora Android
+
+# Construit l'appli Android Sagora depuis code/ (AIOStreams + nos commits), NON signée : la VM récupère l'artefact,
+# le signe avec la clé de Sagora (Bitwarden « Sagora · Android signature », jamais envoyée ici) et le sert à
+# https://stremio.walter-ai.cloud/sagora-app/android (production/android-app/publish.sh). Lancé à la main.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version (SemVer)
+        required: true
+        default: 0.13.0-sagora.5
+
+defaults:
+  run:
+    working-directory: code
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: code/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: code/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile --filter "@aiostreams/web..."
+      - run: pnpm -F @aiostreams/web build:standalone
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          build-root-directory: code/packages/android
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk,cargo-about@0.9.2
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: code/packages/android/natives/rust
+      - name: Install the SDK platform, NDK and CMake
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses >/dev/null
+          pinned() { sed -n "s/^$1 = \"\(.*\)\"/\1/p" packages/android/gradle/libs.versions.toml; }
+          "$sdkmanager" --install "platforms;android-37.2" "ndk;$(pinned android-ndk)" "cmake;$(pinned android-cmake)" >/dev/null
+      - name: "Build (non signé, la VM signe avec la clé de Sagora, qui ne quitte pas Bitwarden)"
+        working-directory: code/packages/android
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          code=$(( ($(date -u +%s) - 1704067200) / 60 ))
+          ./gradlew --no-configuration-cache :app:assembleRelease \
+            -Paiostreams.version="$VERSION" -Paiostreams.versionCode="$code"
+          mkdir -p out
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            cp "app/build/outputs/apk/release/app-$abi-release-unsigned.apk" "out/sagora-android-$abi-unsigned.apk"
+          done
+          jq -n --arg version "$VERSION" --argjson code "$code" '{version: $version, versionCode: $code}' >out/build.json
+          cat out/build.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sagora-android
+          path: code/packages/android/out
+          compression-level: 0
