@@ -4,7 +4,6 @@ import React from 'react';
 import {
   LuActivity,
   LuAudioLines,
-  LuLanguages,
   LuCaptions,
   LuCaptionsOff,
   LuCheck,
@@ -33,6 +32,7 @@ import {
   LuWandSparkles,
 } from 'react-icons/lu';
 import type { VersionLanguages } from '../../lib/playback/version-languages';
+import { LANGUAGES, sameLanguage } from '../../lib/languages';
 import {
   DropdownMenu,
   DropdownMenuItem,
@@ -77,6 +77,58 @@ interface MenuPage {
   icon: React.ReactNode;
   value?: string;
   content: React.ReactNode;
+}
+
+const OTHER_VERSION = 'version:';
+
+/**
+ * One Audio menu for both ways of changing the spoken language: the file's
+ * own tracks, which switch at once where the player can, then the languages
+ * only other versions have, which switch version from the same point. A
+ * browser, which can't switch a file's tracks, lists the versions' languages.
+ */
+function audioChoices(
+  player: PlayerController,
+  languages: VersionLanguages | undefined
+): {
+  options: Track[];
+  value: string | null;
+  onSelect(id: string | null): void;
+} {
+  const tracks = player.audioTracks;
+  if (tracks.length < 2) {
+    return languages
+      ? languages
+      : {
+          options: tracks,
+          value: player.state.audio,
+          onSelect: (id) => id && player.setAudio(id),
+        };
+  }
+  const inFile = (name: string) => {
+    const code = LANGUAGES.find((l) => l.name === name)?.code;
+    return tracks.some((track) => sameLanguage(track.lang, code ?? name));
+  };
+  const others = (languages?.options ?? [])
+    .filter((option) => !inFile(option.id))
+    .map((option) => {
+      const versions = option.detail ?? '';
+      return {
+        ...option,
+        id: OTHER_VERSION + option.id,
+        detail: t`Other version · ${versions}`,
+      };
+    });
+  return {
+    options: [...tracks, ...others],
+    value: player.state.audio,
+    onSelect(id) {
+      if (!id) return;
+      if (id.startsWith(OTHER_VERSION))
+        languages?.onSelect(id.slice(OTHER_VERSION.length));
+      else player.setAudio(id);
+    },
+  };
 }
 
 function Menu({
@@ -589,6 +641,7 @@ export function OptionButtons({
           subtitleLanguages(prefs),
           state.subtitle
         );
+  const audio = audioChoices(player, languages);
   const tv = !!currentHost().tv;
   const unread = useParty()?.unread ?? 0;
   const hidden = subtitles.hidden.length;
@@ -630,25 +683,14 @@ export function OptionButtons({
           <LuLayers />
         </ControlButton>
       )}
-      {languages && (
-        <Menu
-          name="language"
-          label={t`Language`}
-          icon={<LuLanguages />}
-          options={languages.options}
-          value={languages.value}
-          onSelect={languages.onSelect}
-          {...menuState('language')}
-        />
-      )}
-      {(player.audioTracks.length > 1 || player.sound) && (
+      {(audio.options.length > 1 || player.sound) && (
         <Menu
           name="audio"
           label={t`Audio`}
           icon={<LuAudioLines />}
-          options={player.audioTracks}
-          value={state.audio}
-          onSelect={(id) => id && player.setAudio(id)}
+          options={audio.options}
+          value={audio.value}
+          onSelect={audio.onSelect}
           {...menuState('audio')}
           pages={
             player.sound

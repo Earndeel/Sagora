@@ -5468,3 +5468,7 @@ msgstr "Not available yet"
 #: src/components/hero.tsx src/pages/item.tsx
 msgid "No version good enough to watch yet"
 msgstr "No version good enough to watch yet"
+
+#: src/components/player/options.tsx
+msgid "Other version · {versions}"
+msgstr "Other version · {versions}"

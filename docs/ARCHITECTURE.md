@@ -59,7 +59,7 @@ Une configuration AIOStreams (identifiant dans `production/data/famille-uuid`, m
 
 Construite par `pnpm build` et déployée dans `production/web-dist/`. Ce qu'elle ajoute à AIOStreams :
 teasers (bandeau, aperçus de cartes, fiches) en HD avec son progressif, couleurs du titre, lecture en un clic avec
-repli, menu Langue du lecteur, langue des fiches par profil, bouton Versions, qualité selon le débit, cartes voisines
+repli, menu Audio du lecteur (pistes + autres versions), langue des fiches par profil, bouton Versions, qualité selon le débit, cartes voisines
 qui glissent, nom et logo Sagora. Liste complète, commit par commit : `git log --oneline -- code/` depuis le commit
 « AIOStreams 88b623da as Sagora's base ».
 

@@ -104,6 +104,11 @@ Ensuite :
   une variante par profil (Lucas VO + anglais ; Malika, Zoé, Invité VF d'abord), base en VF, 25 versions, dongle sans
   CAM/TS ni 3D. Coco pour Malika : 4 VF en tête sur le site (0 avant), 15 sur le dongle. L'appli Android charge désormais
   l'interface depuis le serveur (0.13.0-sagora.5) : les mises à jour web arrivent aussi sur la TV.
+- « Il y a 2 boutons pour changer de version audio sur la TV, et ils n'affichent pas la même chose » → le menu
+  **Langue** (changer de version, ajouté pour le site) et le menu **Audio** (pistes du fichier) ne font plus qu'un :
+  **Audio** liste les pistes du fichier en cours, puis les langues présentes seulement dans d'autres versions
+  (« Autre version · n versions », qui relance au même endroit). Sur le site, sans pistes multiples, il liste les langues
+  des versions comme avant.
 
 ## Ouvert
 
