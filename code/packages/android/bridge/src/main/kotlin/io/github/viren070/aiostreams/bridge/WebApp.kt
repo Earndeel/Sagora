@@ -11,6 +11,7 @@ import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import androidx.webkit.WebResourceErrorCompat
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.webkit.WebViewAssetLoader
@@ -19,7 +20,9 @@ import java.io.ByteArrayInputStream
 
 /**
  * The bundled web app, served from the APK's `assets/web` at a secure origin,
- * or a dev server's page in its place.
+ * or a server's page in its place. Sagora loads its server's page, so the TV
+ * gets each web update the site gets; the bundled copy opens when that page
+ * can't load.
  */
 class WebApp(private val devUrl: String?) {
     val startUrl: String = devUrl ?: "$ORIGIN/index.html"
@@ -98,12 +101,34 @@ class WebApp(private val devUrl: String?) {
                 return true
             }
 
+            // The server's page unreachable: the bundled copy rather than an error page.
+            override fun onReceivedError(
+                view: WebView,
+                request: WebResourceRequest,
+                error: WebResourceErrorCompat,
+            ) {
+                if (request.isForMainFrame) fallBack(view, request)
+            }
+
+            override fun onReceivedHttpError(
+                view: WebView,
+                request: WebResourceRequest,
+                errorResponse: WebResourceResponse,
+            ) {
+                if (request.isForMainFrame && errorResponse.statusCode >= 500) fallBack(view, request)
+            }
+
             // Unhandled, the WebView ends the whole app with its renderer.
             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
                 rendererGone(detail.didCrash())
                 return true
             }
         }
+    }
+
+    private fun fallBack(view: WebView, request: WebResourceRequest) {
+        if (devUrl == null || originOf(request.url.toString()) != originOf(devUrl)) return
+        view.loadUrl("$ORIGIN/index.html")
     }
 
     private companion object {

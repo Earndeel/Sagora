@@ -41,36 +41,44 @@
       "English"
     ],
     "preferredSubtitles": [
-      "French"
+      "French",
+      "English"
     ],
     "jellyfin": {
       "resolveOnOpen": true,
-      "maxVersions": 10,
+      "maxVersions": 25,
       "segments": true,
       "primary": {
-        "name": "Lucas"
+        "name": "Lucas",
+        "variants": [
+          "profil-lucas"
+        ]
       },
       "personas": [
         {
           "id": "profil2",
-          "name": "Profil 2",
+          "name": "Malika",
+          "variants": [
+            "profil-malika"
+          ],
           "history": "own"
         },
         {
           "id": "profil3",
-          "name": "Profil 3 (VO)",
-          "history": "own",
+          "name": "Zoé",
           "variants": [
-            "vo"
-          ]
+            "profil-zoe"
+          ],
+          "history": "own"
         },
         {
           "id": "invite",
           "name": "Invité",
-          "history": "own",
           "variants": [
+            "profil-invite",
             "sans-4k"
-          ]
+          ],
+          "history": "own"
         }
       ]
     },
@@ -85,6 +93,30 @@
       "enabled": false
     },
     "variants": [
+      {
+        "id": "profil-lucas",
+        "name": "Profil Lucas : VO sous-titrée anglais",
+        "enabled": true,
+        "script": "set preferredLanguages = [\"Original\", \"English\", \"Multi\", \"Dual Audio\", \"French\"]\nset preferredSubtitles = [\"English\", \"French\"]"
+      },
+      {
+        "id": "profil-malika",
+        "name": "Profil Malika : VF d'abord, sous-titres français",
+        "enabled": true,
+        "script": "set preferredLanguages = [\"French\", \"Multi\", \"Dual Audio\", \"Original\", \"English\"]\nset preferredSubtitles = [\"French\", \"English\"]"
+      },
+      {
+        "id": "profil-zoe",
+        "name": "Profil Zoé : VF d'abord, sous-titres français",
+        "enabled": true,
+        "script": "set preferredLanguages = [\"French\", \"Multi\", \"Dual Audio\", \"Original\", \"English\"]\nset preferredSubtitles = [\"French\", \"English\"]"
+      },
+      {
+        "id": "profil-invite",
+        "name": "Profil Invité : VF d'abord, sous-titres français",
+        "enabled": true,
+        "script": "set preferredLanguages = [\"French\", \"Multi\", \"Dual Audio\", \"Original\", \"English\"]\nset preferredSubtitles = [\"French\", \"English\"]"
+      },
       {
         "id": "vo",
         "name": "Version originale",
@@ -101,8 +133,147 @@
         "id": "navigateur",
         "name": "Navigateur (son et formats lisibles par le navigateur)",
         "enabled": true,
-        "when": "header('x-aiostreams-client') == 'AIOStreams Web'",
-        "script": "set excludedAudioTags = [\"Atmos\", \"DD+\", \"DD\", \"DTS:X\", \"DTS-HD MA\", \"DTS-HD\", \"DTS-ES\", \"DTS\", \"TrueHD\", \"PCM\"]\nset excludedResolutions = [\"2160p\"]\nset preferredEncodes = [\"AVC\", \"AV1\"]\nset preferredAudioTags = [\"AAC\", \"OPUS\"]\nset preferredRegexPatterns = [{\"name\": \"MP4\", \"pattern\": \"(?i)\\\\.mp4\\\\b|\\\\bmp4\\\\b\"}]\nset sortCriteria = {\"global\": [{\"key\": \"cached\", \"direction\": \"desc\"}, {\"key\": \"language\", \"direction\": \"desc\"}, {\"key\": \"encode\", \"direction\": \"desc\"}, {\"key\": \"regexPatterns\", \"direction\": \"desc\"}, {\"key\": \"audioTag\", \"direction\": \"desc\"}, {\"key\": \"subtitle\", \"direction\": \"desc\"}, {\"key\": \"resolution\", \"direction\": \"desc\"}, {\"key\": \"size\", \"direction\": \"desc\"}]}"
+        "script": "set excludedAudioTags = [\"Atmos\", \"DD+\", \"DD\", \"DTS:X\", \"DTS-HD MA\", \"DTS-HD\", \"DTS-ES\", \"DTS\", \"TrueHD\", \"PCM\"]\nset excludedResolutions = [\"2160p\"]\nset preferredEncodes = [\"AVC\", \"AV1\"]\nset preferredAudioTags = [\"AAC\", \"OPUS\"]\nset preferredRegexPatterns = [{\"name\": \"MP4\", \"pattern\": \"(?i)\\\\.mp4\\\\b|\\\\bmp4\\\\b\"}]\nset sortCriteria = {\"global\": [{\"key\": \"cached\", \"direction\": \"desc\"}, {\"key\": \"language\", \"direction\": \"desc\"}, {\"key\": \"encode\", \"direction\": \"desc\"}, {\"key\": \"regexPatterns\", \"direction\": \"desc\"}, {\"key\": \"audioTag\", \"direction\": \"desc\"}, {\"key\": \"subtitle\", \"direction\": \"desc\"}, {\"key\": \"resolution\", \"direction\": \"desc\"}, {\"key\": \"size\", \"direction\": \"desc\"}]}",
+        "when": "header('x-aiostreams-client') == 'AIOStreams Web'"
+      },
+      {
+        "id": "langue-en-gb",
+        "name": "Fiches en anglais (interface en anglais)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"en-US\"",
+        "when": "header('x-aiostreams-language') == 'en-GB'"
+      },
+      {
+        "id": "langue-de",
+        "name": "Fiches en allemand (interface en allemand)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"de-DE\"",
+        "when": "header('x-aiostreams-language') == 'de'"
+      },
+      {
+        "id": "langue-es",
+        "name": "Fiches en espagnol (interface en espagnol)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"es-ES\"",
+        "when": "header('x-aiostreams-language') == 'es'"
+      },
+      {
+        "id": "langue-it",
+        "name": "Fiches en italien (interface en italien)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"it-IT\"",
+        "when": "header('x-aiostreams-language') == 'it'"
+      },
+      {
+        "id": "langue-pt",
+        "name": "Fiches en portugais (interface en portugais)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"pt-PT\"",
+        "when": "header('x-aiostreams-language') == 'pt'"
+      },
+      {
+        "id": "langue-pt-br",
+        "name": "Fiches en portugais du Brésil (interface en portugais du Brésil)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"pt-BR\"",
+        "when": "header('x-aiostreams-language') == 'pt-BR'"
+      },
+      {
+        "id": "langue-nl",
+        "name": "Fiches en néerlandais (interface en néerlandais)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"nl-NL\"",
+        "when": "header('x-aiostreams-language') == 'nl'"
+      },
+      {
+        "id": "langue-ca",
+        "name": "Fiches en catalan (interface en catalan)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"ca-ES\"",
+        "when": "header('x-aiostreams-language') == 'ca'"
+      },
+      {
+        "id": "langue-el",
+        "name": "Fiches en grec (interface en grec)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"el-GR\"",
+        "when": "header('x-aiostreams-language') == 'el'"
+      },
+      {
+        "id": "langue-fi",
+        "name": "Fiches en finnois (interface en finnois)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"fi-FI\"",
+        "when": "header('x-aiostreams-language') == 'fi'"
+      },
+      {
+        "id": "langue-id",
+        "name": "Fiches en indonésien (interface en indonésien)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"id-ID\"",
+        "when": "header('x-aiostreams-language') == 'id'"
+      },
+      {
+        "id": "langue-ms",
+        "name": "Fiches en malais (interface en malais)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"ms-MY\"",
+        "when": "header('x-aiostreams-language') == 'ms'"
+      },
+      {
+        "id": "langue-nb",
+        "name": "Fiches en norvégien (interface en norvégien)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"nb-NO\"",
+        "when": "header('x-aiostreams-language') == 'nb'"
+      },
+      {
+        "id": "langue-pl",
+        "name": "Fiches en polonais (interface en polonais)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"pl-PL\"",
+        "when": "header('x-aiostreams-language') == 'pl'"
+      },
+      {
+        "id": "langue-sl",
+        "name": "Fiches en slovène (interface en slovène)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"sl-SI\"",
+        "when": "header('x-aiostreams-language') == 'sl'"
+      },
+      {
+        "id": "langue-sv",
+        "name": "Fiches en suédois (interface en suédois)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"sv-SE\"",
+        "when": "header('x-aiostreams-language') == 'sv'"
+      },
+      {
+        "id": "langue-tr",
+        "name": "Fiches en turc (interface en turc)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"tr-TR\"",
+        "when": "header('x-aiostreams-language') == 'tr'"
+      },
+      {
+        "id": "langue-zh-hans",
+        "name": "Fiches en chinois (interface en chinois)",
+        "enabled": true,
+        "script": "set presets[instanceId = \"tmd\"].options.language = \"zh-CN\"",
+        "when": "header('x-aiostreams-language') == 'zh-Hans'"
+      },
+      {
+        "id": "vo-en",
+        "name": "VO sous-titrée anglais (Lucas)",
+        "enabled": true,
+        "script": "set preferredLanguages = [\"Original\", \"English\", \"Multi\", \"Dual Audio\", \"French\"]\nset preferredSubtitles = [\"English\", \"French\"]"
+      },
+      {
+        "id": "tv-salon",
+        "name": "Dongle TV du salon : ni 4K, ni HDR, ni REMUX",
+        "enabled": true,
+        "script": "set excludedResolutions = [\"2160p\", \"1440p\"]\nset excludedVisualTags = [\"3D\", \"HDR10+\", \"HDR10\", \"DV\", \"HDR\", \"HLG\"]\nset excludedQualities = [\"CAM\", \"SCR\", \"TS\", \"TC\", \"BluRay REMUX\"]",
+        "when": "header('x-aiostreams-client') == 'AIOStreams Android TV' and (includes(header('x-aiostreams-device'), 'Living Room') or includes(header('x-aiostreams-device'), 'D6'))"
       }
     ],
     "sortCriteria": {

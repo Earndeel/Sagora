@@ -44,6 +44,9 @@ Ce qui fait règle pour Sagora, avec sa date. Une décision plus récente rempla
 | 2026-11-05 | La langue de l'interface d'un profil vaut aussi pour titres, synopsis et bandes-annonces, **séparément pour chaque profil**. |
 | 2026-11-05 | **Lucas** (Monsieur) : VO sous-titrée en anglais, interface en anglais. **Malika** (sa mère) : VF, TV 4K HDR. **Zoé** (sa sœur) : iPad, lecture par le debrid uniquement. **Invité** : sans 4K. |
 | 2026-11-05 | Le **dongle TV** ne lit ni la 4K ni le HDR ; le Mac, si. Lecture : charger le meilleur choix pour la personne et l'appareil, et changer de qualité selon le débit comme Netflix. |
+| 2026-11-06 | **Chaque profil a son propre filtre de préférence** (une variante `profil-<nom>` par profil, modifiable à part). Les réglages d'appareil (dongle, navigateur) s'ajoutent après sans remplacer les exclusions communes (CAM/TS, 3D). |
+| 2026-11-06 | **Les mises à jour web et TV sont identiques** : l'appli Android charge l'interface depuis sagora.walter-ai.cloud (la copie intégrée ne sert qu'en secours). |
+| 2026-11-06 | Lecture grisée « Pas encore disponible » pour un film sans version acceptable (ex. Wildwood, seulement des copies filmées en salle). |
 
 ## Bandes-annonces (teasers)
 

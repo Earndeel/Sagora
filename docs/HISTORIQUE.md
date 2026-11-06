@@ -100,6 +100,10 @@ Ensuite :
   10 versions au plus, variante `tv-salon` qui remplace l'exclusion CAM/TS (le dongle propose les copies filmées en salle),
   variante `navigateur` qui retire tout son Dolby/DTS (Brave sur Mac ne le décode pas : `canPlayType` vide) → presque
   aucune VF sur le site. Correctifs de configuration en attente de l'accord de Monsieur.
+- « Chaque profil doit avoir un filtre de préférence indépendant ! Et que les mises à jour web et TV soient identiques » →
+  une variante par profil (Lucas VO + anglais ; Malika, Zoé, Invité VF d'abord), base en VF, 25 versions, dongle sans
+  CAM/TS ni 3D. Coco pour Malika : 4 VF en tête sur le site (0 avant), 15 sur le dongle. L'appli Android charge désormais
+  l'interface depuis le serveur (0.13.0-sagora.5) : les mises à jour web arrivent aussi sur la TV.
 
 ## Ouvert
 

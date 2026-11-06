@@ -39,7 +39,11 @@ android {
             .orElse(providers.fileContents(rootProject.layout.projectDirectory.file("version.txt")).asText.map(String::trim))
             .get()
         versionCode = providers.gradleProperty("aiostreams.versionCode").map(String::toInt).getOrElse(1)
-        buildConfigField("String", "WEB_URL", "\"\"")
+        // Sagora : l'interface vient du serveur, comme sur le site, pour que chaque mise à jour
+        // web arrive aussi sur la TV ; la copie intégrée ne sert qu'en secours (2026-11-06).
+        val webUrl = providers.gradleProperty("aiostreams.webUrl")
+            .getOrElse("https://sagora.walter-ai.cloud/")
+        buildConfigField("String", "WEB_URL", "\"$webUrl\"")
         val feed = providers.gradleProperty("aiostreams.updateFeed")
             .getOrElse("https://sagora.walter-ai.cloud/sagora-app")
         buildConfigField("String", "UPDATE_FEED", "\"$feed\"")
@@ -74,8 +78,6 @@ android {
             // Beside a released copy, which a differently signed build can't replace.
             applicationIdSuffix = ".debug"
             resValue("string", "app_name", "Sagora Debug")
-            val webUrl = providers.gradleProperty("aiostreams.webUrl").getOrElse("")
-            buildConfigField("String", "WEB_URL", "\"$webUrl\"")
         }
         release {
             isMinifyEnabled = true
