@@ -1,0 +1,156 @@
+{
+  "_comment": "Réglages de la configuration familiale, appliqués par-dessus le modèle officiel « Debrid Starter » (resources/templates/debrid-starter.json). Aucun secret ici : configure.py ajoute la clé TorBox depuis Bitwarden.",
+  "addonName": "Famille",
+  "extraPresets": [
+    {
+      "type": "tmdb-addon",
+      "instanceId": "tmd",
+      "enabled": true,
+      "options": {
+        "name": "TMDB",
+        "language": "fr-FR",
+        "resources": [
+          "catalog",
+          "meta"
+        ],
+        "timeout": 6500,
+        "url": "https://tmdb.elfhosted.com",
+        "provideImdbId": true
+      }
+    },
+    {
+      "type": "opensubtitles",
+      "instanceId": "ost",
+      "enabled": true,
+      "options": {
+        "name": "OpenSubtitles",
+        "timeout": 6000,
+        "resources": [
+          "subtitles"
+        ]
+      }
+    }
+  ],
+  "overrides": {
+    "excludeUncached": true,
+    "preferredLanguages": [
+      "French",
+      "Multi",
+      "Dual Audio",
+      "Original",
+      "English"
+    ],
+    "preferredSubtitles": [
+      "French"
+    ],
+    "jellyfin": {
+      "resolveOnOpen": true,
+      "maxVersions": 10,
+      "segments": true,
+      "primary": {
+        "name": "Lucas"
+      },
+      "personas": [
+        {
+          "id": "profil2",
+          "name": "Profil 2",
+          "history": "own"
+        },
+        {
+          "id": "profil3",
+          "name": "Profil 3 (VO)",
+          "history": "own",
+          "variants": [
+            "vo"
+          ]
+        },
+        {
+          "id": "invite",
+          "name": "Invité",
+          "history": "own",
+          "variants": [
+            "sans-4k"
+          ]
+        }
+      ]
+    },
+    "_sansTMDB": "Désactivés tant qu'aucune clé TMDB n'est dans Bitwarden (« AIOStreams · TMDB »)",
+    "titleMatching": {
+      "enabled": false
+    },
+    "yearMatching": {
+      "enabled": false
+    },
+    "digitalReleaseFilter": {
+      "enabled": false
+    },
+    "variants": [
+      {
+        "id": "vo",
+        "name": "Version originale",
+        "enabled": true,
+        "script": "set preferredLanguages = [\"Original\", \"English\", \"Multi\", \"Dual Audio\", \"French\"]\nset preferredSubtitles = [\"French\", \"English\"]"
+      },
+      {
+        "id": "sans-4k",
+        "name": "Sans 4K (connexion modeste)",
+        "enabled": true,
+        "script": "set excludedResolutions = [\"2160p\", \"1440p\"]"
+      },
+      {
+        "id": "navigateur",
+        "name": "Navigateur (son et formats lisibles par le navigateur)",
+        "enabled": true,
+        "when": "header('x-aiostreams-client') == 'AIOStreams Web'",
+        "script": "set excludedAudioTags = [\"Atmos\", \"DD+\", \"DD\", \"DTS:X\", \"DTS-HD MA\", \"DTS-HD\", \"DTS-ES\", \"DTS\", \"TrueHD\", \"PCM\"]\nset excludedResolutions = [\"2160p\"]\nset preferredEncodes = [\"AVC\", \"AV1\"]\nset preferredAudioTags = [\"AAC\", \"OPUS\"]\nset preferredRegexPatterns = [{\"name\": \"MP4\", \"pattern\": \"(?i)\\\\.mp4\\\\b|\\\\bmp4\\\\b\"}]\nset sortCriteria = {\"global\": [{\"key\": \"cached\", \"direction\": \"desc\"}, {\"key\": \"language\", \"direction\": \"desc\"}, {\"key\": \"encode\", \"direction\": \"desc\"}, {\"key\": \"regexPatterns\", \"direction\": \"desc\"}, {\"key\": \"audioTag\", \"direction\": \"desc\"}, {\"key\": \"subtitle\", \"direction\": \"desc\"}, {\"key\": \"resolution\", \"direction\": \"desc\"}, {\"key\": \"size\", \"direction\": \"desc\"}]}"
+      }
+    ],
+    "sortCriteria": {
+      "global": [
+        {
+          "key": "cached",
+          "direction": "desc"
+        },
+        {
+          "key": "language",
+          "direction": "desc"
+        },
+        {
+          "key": "subtitle",
+          "direction": "desc"
+        },
+        {
+          "key": "resolution",
+          "direction": "desc"
+        },
+        {
+          "key": "visualTag",
+          "direction": "desc"
+        },
+        {
+          "key": "audioTag",
+          "direction": "desc"
+        },
+        {
+          "key": "audioChannel",
+          "direction": "desc"
+        },
+        {
+          "key": "encode",
+          "direction": "desc"
+        },
+        {
+          "key": "size",
+          "direction": "desc"
+        }
+      ]
+    },
+    "preferredVisualTags": [
+      "HDR10+",
+      "HDR10",
+      "HDR"
+    ],
+    "_tri": "Langue (VF d'abord) avant la résolution ; dans un navigateur (variante automatique « navigateur »), les formats que le navigateur sait décoder passent devant."
+  },
+  "_recommandations": "More Like This (addon communautaire) refuse la configuration sans clé ; « Plus de titres similaires » utilise les recommandations TMDB dès qu'une clé TMDB est dans Bitwarden, sinon le genre du titre."
+}

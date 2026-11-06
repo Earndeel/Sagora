@@ -1,0 +1,115 @@
+# Production de l'application familiale (https://stremio.walter-ai.cloud).
+# AIOStreams : image officielle 2026.11.04.1410-nightly (commit 88b623da) figée par empreinte ;
+# seule l'interface web est remplacée par celle de la branche « famille » (web-dist/).
+name: aiostreams
+services:
+  aiostreams:
+    image: ghcr.io/viren070/aiostreams@sha256:6956f48f159ed2c4b89144613119fcf091dcd82f5f3578f0a9ed1b6c4b8cadcf
+    container_name: aiostreams
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:18090:3000
+    env_file:
+      - settings.env
+      - secrets.env
+    volumes:
+      - ./data:/app/data
+      # Interface web de la branche famille (retirer cette ligne = interface officielle de l'image)
+      - ./web-dist:/app/packages/web/dist:ro
+    mem_limit: 1g
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options: { max-size: 10m, max-file: "3" }
+
+  # StremThru (2026-11-05) : relais vers TorBox hébergé ici au lieu du service public stremthru.13377001.xyz,
+  # pour que la clé TorBox et les passkeys de trackers privés ne sortent pas, et qu'il puisse lire les .torrent
+  # privés depuis Prowlarr. Joignable seulement par Sagora (réseau de la pile) ; test local 127.0.0.1:18095.
+  stremthru:
+    image: muniftanjim/stremthru@sha256:947cfcb2601c67f2f21eb11bd1ea1e555889cec9e0b347cefd0c63754b9c641a
+    container_name: aiostreams-stremthru
+    restart: unless-stopped
+    environment:
+      # Relais TorBox seulement : pas de bases IMDb ni de listes DMM (1 Go en 30 s), ni catalogues/sources Stremio.
+      - STREMTHRU_FEATURE=-meta,-newz,-dmm_hashlist,-imdb_title,-stremio_list,-stremio_newz,-stremio_sidekick,-stremio_store,-stremio_torz,-stremio_wrap,-probe_media_info
+    ports:
+      - 127.0.0.1:18095:8080
+    volumes:
+      - ./stremthru:/app/data
+    mem_limit: 384m
+    cpus: 1.0
+    logging:
+      driver: json-file
+      options: { max-size: 5m, max-file: "3" }
+
+  # Relais Torznab (2026-11-05) : entre Sagora et Prowlarr, cherche les épisodes avec le numéro des trackers (TVDB,
+  # retrouvé par la date de diffusion TMDB : Koh-Lanta S34E21 → S34E11) et rend le numéro TMDB. torznab-relay/relay.py
+  torznab-relay:
+    image: python@sha256:e6dae589c1c05976188fd3bd019afd091445fc533ed2ea29001beddc7368a9c8  # python:3.12-alpine
+    container_name: aiostreams-torznab-relay
+    restart: unless-stopped
+    command: ["python", "-u", "/relay/relay.py"]
+    env_file:
+      - torznab-relay/relay.env
+    volumes:
+      - ./torznab-relay/relay.py:/relay/relay.py:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 64m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options: { max-size: 5m, max-file: "3" }
+
+  # Prowlarr (2026-11-05) : index Usenet/torrent pour Sagora (NZBIndex). Pas d'accès public :
+  # Sagora le joint par le réseau de la pile ; interface d'admin en local et sur Tailscale (http://100.91.35.121:19696).
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr@sha256:431d7efebcef466e56adaa40a7a2fa2b0e85159a037b8bf465eaadbf0cf5bedf  # 2.7.0.5723-ls167
+    container_name: aiostreams-prowlarr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    ports:
+      - 127.0.0.1:19696:9696
+      # Interface d'admin pour Monsieur depuis son Mac, par Tailscale seulement (jamais en public).
+      - 100.91.35.121:19696:9696
+    volumes:
+      - ./prowlarr:/config
+    mem_limit: 512m
+    cpus: 1.0
+    logging:
+      driver: json-file
+      options: { max-size: 5m, max-file: "3" }
+
+  front:
+    image: nginxinc/nginx-unprivileged@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
+    container_name: aiostreams-front
+    restart: unless-stopped
+    depends_on: [aiostreams]
+    ports:
+      - 127.0.0.1:18085:8080
+    volumes:
+      - ./front/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./front/service-worker.js:/etc/nginx/retire/service-worker.js:ro
+      - ./front/brand:/etc/nginx/brand:ro
+      - ./front/app:/etc/nginx/app:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 64m
+    cpus: 0.5
+    pids_limit: 64
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/jellyfin/web/ || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options: { max-size: 5m, max-file: "3" }

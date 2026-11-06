@@ -1,0 +1,65 @@
+{
+  "_comment": "Configuration de test du repli automatique (préproduction uniquement) : TMDB + addon de test à versions cassée puis valide.",
+  "addonName": "Test repli",
+  "onlyExtraPresets": true,
+  "extraPresets": [
+    {
+      "type": "tmdb-addon",
+      "instanceId": "tmd",
+      "enabled": true,
+      "options": {
+        "name": "TMDB",
+        "language": "fr-FR",
+        "resources": [
+          "catalog",
+          "meta"
+        ],
+        "timeout": 6500,
+        "url": "https://tmdb.elfhosted.com"
+      }
+    },
+    {
+      "type": "custom",
+      "instanceId": "tst",
+      "enabled": true,
+      "options": {
+        "name": "Test repli",
+        "manifestUrl": "http://aiostreams-test-addon:18099/manifest.json",
+        "timeout": 5000,
+        "resources": [
+          "stream"
+        ]
+      }
+    }
+  ],
+  "overrides": {
+    "excludeUncached": true,
+    "preferredLanguages": [
+      "French",
+      "Multi",
+      "Dual Audio",
+      "Original",
+      "English"
+    ],
+    "preferredSubtitles": [
+      "French"
+    ],
+    "_sansTMDB": "Désactivés tant qu'aucune clé TMDB n'est dans Bitwarden (« AIOStreams · TMDB »)",
+    "titleMatching": {
+      "enabled": false
+    },
+    "yearMatching": {
+      "enabled": false
+    },
+    "digitalReleaseFilter": {
+      "enabled": false
+    },
+    "jellyfin": {
+      "resolveOnOpen": true,
+      "maxVersions": 10,
+      "primary": {
+        "name": "Testeur"
+      }
+    }
+  }
+}
