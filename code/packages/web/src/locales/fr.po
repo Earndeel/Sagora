@@ -5290,3 +5290,11 @@ msgstr "{count, plural, one {# version} other {# versions}}"
 #: src/lib/playback/adaptive.ts
 msgid "The connection is slow, switching to a lighter version…"
 msgstr "Connexion lente, passage à une version plus légère…"
+
+#: src/components/hero.tsx src/pages/item.tsx
+msgid "Not available yet"
+msgstr "Pas encore disponible"
+
+#: src/components/hero.tsx src/pages/item.tsx
+msgid "No version good enough to watch yet"
+msgstr "Aucune version regardable pour l'instant"

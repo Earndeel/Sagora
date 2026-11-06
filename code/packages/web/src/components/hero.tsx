@@ -16,7 +16,7 @@ import { ScrollRoot, watch } from '../lib/use-in-view';
 import { backdropUrl, landscapeUrl, logoUrl } from '../lib/images';
 import { itemSubtitle, itemTitle, ticksToMs } from '../lib/format';
 import { itemPath, navigate } from '../lib/paths';
-import { useVersionPicker } from './version-picker';
+import { useNoVersions, useVersionPicker } from './version-picker';
 import { Scores, scoresOf } from './scores';
 import type { JellyfinClient } from '../lib/client';
 import type { BaseItemDto } from '../lib/types';
@@ -262,6 +262,8 @@ function HeroDetails({
           held,
         });
   const holdPlay = useHold(() => play(true));
+  // Known only once its page or Play asked: the hero itself searches nothing.
+  const noVersions = useNoVersions(item);
   const parts: [string, React.ReactNode][] = [
     item.Type === 'Episode'
       ? ['episode', itemSubtitle(item)]
@@ -323,10 +325,14 @@ function HeroDetails({
               intent="white"
               className="rounded-full"
               leftIcon={<BiPlay className="text-xl" />}
+              disabled={noVersions}
+              title={
+                noVersions ? t`No version good enough to watch yet` : undefined
+              }
               onClick={() => play()}
-              {...holdPlay}
+              {...(!noVersions && holdPlay)}
             >
-              <Trans>Play</Trans>
+              {noVersions ? t`Not available yet` : <Trans>Play</Trans>}
             </Button>
           )}
           <Button

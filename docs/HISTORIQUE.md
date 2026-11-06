@@ -94,6 +94,12 @@ Ensuite :
   démarre dans la langue du navigateur et ces requêtes-là n'étaient pas refaites → corrigé.
 - « Ajoute l'étoile et la note de l'œuvre à côté de la date » → sous chaque carte (affiches et cartes larges) :
   `2008 • ★ 8.5`, la note IMDb sur 10 (sinon la première note connue) ; rien pour un épisode, dont la ligne est son numéro.
+- « Sur Malika la VF n'est pas choisie, il manque plein de sources surtout en VF, griser Lecture pour Wildwood » →
+  **Lecture grisée « Pas encore disponible »** sur la fiche d'un film sans aucune version (et dans le bandeau une fois la
+  liste connue). Constaté dans la configuration en service : base en « Original » d'abord (au lieu de French, Multi…),
+  10 versions au plus, variante `tv-salon` qui remplace l'exclusion CAM/TS (le dongle propose les copies filmées en salle),
+  variante `navigateur` qui retire tout son Dolby/DTS (Brave sur Mac ne le décode pas : `canPlayType` vide) → presque
+  aucune VF sur le site. Correctifs de configuration en attente de l'accord de Monsieur.
 
 ## Ouvert
 

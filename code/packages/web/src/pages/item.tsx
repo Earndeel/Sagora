@@ -94,6 +94,7 @@ import { CastAndCrew } from '../components/people';
 import { KINDS, KindTabs } from '../components/kind-tabs';
 import {
   PickOnArrival,
+  useNoVersions,
   usePreloadVersions,
   useVersionPicker,
 } from '../components/version-picker';
@@ -416,6 +417,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
         ? item
         : undefined;
   usePreloadVersions(target);
+  const noVersions = useNoVersions(target, true);
   const resumeMs = ticksToMs(target?.UserData?.PlaybackPositionTicks);
   const code =
     target?.Type === 'Episode'
@@ -429,6 +431,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
     : code
       ? t`Play ${code}`
       : t`Play`;
+  const playText = noVersions ? t`Not available yet` : playLabel;
   const holdPlay = useHold(
     target
       ? () => picker.play(target, { startMs: resumeMs, held: true })
@@ -532,6 +535,12 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
                   quick && 'h-12 text-base'
                 )}
                 leftIcon={<BiPlay className="text-xl" />}
+                disabled={noVersions}
+                title={
+                  noVersions
+                    ? t`No version good enough to watch yet`
+                    : undefined
+                }
                 onClick={() =>
                   target
                     ? picker.play(target, { startMs: resumeMs })
@@ -545,9 +554,9 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
                           })
                       )
                 }
-                {...holdPlay}
+                {...(!noVersions && holdPlay)}
               >
-                {playLabel}
+                {playText}
               </Button>
               {!!resumeMs && target && (
                 <Tooltip

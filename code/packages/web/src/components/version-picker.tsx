@@ -28,7 +28,7 @@ import { Skeleton } from '@aiostreams/ui/skeleton';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { Tooltip } from '@aiostreams/ui/tooltip';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from '../lib/session';
 import { useFeature } from '../lib/server-info';
 import {
@@ -167,6 +167,26 @@ export function PickOnArrival({
     navigate(itemPath(item.data), { replace: true });
   }, [item.data, picker, playlist]);
   return null;
+}
+
+/**
+ * Whether a film is known to have no version yet, its list holding notices
+ * only, as for a film still in cinemas whose only copies are filmed in the
+ * room. `ask` fetches the list, for a page the server resolved on opening it;
+ * otherwise only a list already fetched counts. Not for a downloaded film.
+ */
+export function useNoVersions(
+  item: BaseItemDto | undefined,
+  ask = false
+): boolean {
+  const infoOptions = usePlaybackInfoOptions();
+  const downloaded = useFindDownloaded();
+  const film = item?.Type === 'Movie' && !!item.Id && !downloaded(item);
+  const info = useQuery({
+    ...infoOptions(item?.Id ?? ''),
+    enabled: film && ask,
+  });
+  return film && !!info.data && playableSources(info.data).length === 0;
 }
 
 /** With the setting on, asks for the item's versions before Play does. */
