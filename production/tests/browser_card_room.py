@@ -24,7 +24,7 @@ with sync_playwright() as p:
         b = p.chromium.connect_over_cdp("http://127.0.0.1:9333")
         page = b.new_context(viewport={"width": 1600, "height": 900}, locale="fr-FR").new_page(); errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
-        page.goto("https://stremio.walter-ai.cloud/jellyfin/web/", wait_until="domcontentloaded")
+        page.goto("https://sagora.walter-ai.cloud/jellyfin/web/", wait_until="domcontentloaded")
     else:
         b, page, errors = open_app(p)
     page.wait_for_selector("input")

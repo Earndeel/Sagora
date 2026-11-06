@@ -78,6 +78,11 @@ Monsieur demande que Sagora soit documenté depuis le début et que tout soit su
 - services système renommés `sagora-health`, `sagora-backup`, `sagora-restore-test` ;
 - l'ancien historique Git du code reste dans `/user/Lucas/backups/sagora/code-avant-depot-unique-20261106.bundle`.
 
+Puis : « remplacer stremio.walter-ai.cloud par sagora.walter-ai.cloud ». **Sagora a sa propre adresse,
+https://sagora.walter-ai.cloud** (DNS, tunnel, protection de /prowlarr, règle de cache, `BASE_URL`, appli Android pour
+ses prochaines versions). L'ancienne adresse continue de servir la même chose : le dongle et les navigateurs déjà
+connectés n'ont rien à refaire.
+
 ## Ouvert
 
 - Lire un seul épisode dans un pack de saison (reporté par Monsieur).

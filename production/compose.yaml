@@ -1,4 +1,4 @@
-# Production de l'application familiale (https://stremio.walter-ai.cloud).
+# Production de l'application familiale (https://sagora.walter-ai.cloud).
 # AIOStreams : image officielle 2026.11.04.1410-nightly (commit 88b623da) figée par empreinte ;
 # seule l'interface web est remplacée par celle de la branche « famille » (web-dist/).
 name: aiostreams

@@ -10,7 +10,7 @@ Sagora = **AIOStreams** (agrégateur de sources + serveur compatible Jellyfin + 
  Appareils de la famille                      VM w-alter (Docker, pile « aiostreams »)
  ─────────────────────                        ─────────────────────────────────────────────────────────
  navigateur, appli Android/TV,  ──HTTPS──▶ tunnel Cloudflare ──▶ aiostreams-front (nginx, :18085)
- appli de bureau                 stremio.walter-ai.cloud              │  /             → /jellyfin/web/ (« Qui regarde ? »)
+ appli de bureau                 sagora.walter-ai.cloud               │  /             → /jellyfin/web/ (« Qui regarde ? »)
                                                                       │  /logo.png…    → front/brand/ (logo Sagora)
                                                                       │  /sagora-app/  → mises à jour de l'appli Android
                                                                       │  /prowlarr     → Prowlarr (Cloudflare Access)
@@ -38,7 +38,7 @@ Les conteneurs gardent leur nom technique `aiostreams-*` : la configuration de l
 | `aiostreams-front` | 127.0.0.1:18085 | nginx d'entrée, seule cible du tunnel Cloudflare. Ajoute l'en-tête `X-AIOStreams-Language` à la liste CORS du serveur (sinon l'appli Android ne peut pas se connecter). |
 | `aiostreams-stremthru` | 127.0.0.1:18095 | Notre **StremThru** : relais vers TorBox (la clé TorBox et les passkeys ne sortent pas), lit les .torrent privés dans Prowlarr. Fonction `torz` obligatoire. |
 | `aiostreams-torznab-relay` | interne | `torznab-relay/relay.py` : relaie les recherches Torznab vers Prowlarr et **renumérote les épisodes** (TMDB ↔ trackers) par date de diffusion (TMDB → TVDB/Skyhook). |
-| `aiostreams-prowlarr` | 127.0.0.1:19696 et Tailscale | Index de trackers et Usenet ; page pour Monsieur : https://stremio.walter-ai.cloud/prowlarr (Cloudflare Access « Sagora Prowlarr » puis compte Prowlarr). |
+| `aiostreams-prowlarr` | 127.0.0.1:19696 et Tailscale | Index de trackers et Usenet ; page pour Monsieur : https://sagora.walter-ai.cloud/prowlarr (Cloudflare Access « Sagora Prowlarr » puis compte Prowlarr). |
 
 ## La configuration « Famille »
 

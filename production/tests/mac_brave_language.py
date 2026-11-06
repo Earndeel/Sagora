@@ -1,7 +1,7 @@
 """Depuis le Mac (Brave sans tête) : menus Langue et Sous-titres du lecteur, son réellement décodé, changement de langue."""
 import json, subprocess, sys
 from playwright.sync_api import sync_playwright
-URL = "https://stremio.walter-ai.cloud/"
+URL = "https://sagora.walter-ai.cloud/"
 UUID = open("/apps/sagora/production/data/famille-uuid").read().strip()
 PW = subprocess.run(["walter-secret", "get", "AIOStreams préproduction · configuration Famille", "password"], capture_output=True, text=True).stdout.strip()
 TITLE = sys.argv[1] if len(sys.argv) > 1 else "Coco"

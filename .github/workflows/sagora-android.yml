@@ -2,7 +2,7 @@ name: Sagora Android
 
 # Construit l'appli Android Sagora depuis code/ (AIOStreams + nos commits), NON signée : la VM récupère l'artefact,
 # le signe avec la clé de Sagora (Bitwarden « Sagora · Android signature », jamais envoyée ici) et le sert à
-# https://stremio.walter-ai.cloud/sagora-app/android (production/android-app/publish.sh). Lancé à la main.
+# https://sagora.walter-ai.cloud/sagora-app/android (production/android-app/publish.sh). Lancé à la main.
 on:
   workflow_dispatch:
     inputs:

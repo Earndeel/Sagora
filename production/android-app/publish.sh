@@ -2,7 +2,7 @@
 # Appli Android Sagora : récupère la construction non signée de GitHub Actions (dépôt privé Earndeel/sagora),
 # la signe ici avec la clé de Sagora (Bitwarden « Sagora · Android signature », en mémoire seulement, jamais envoyée
 # à GitHub), vérifie les signatures et publie APK + update.json là où l'appli cherche ses mises à jour
-# (https://stremio.walter-ai.cloud/sagora-app/android/, BuildConfig.UPDATE_FEED).
+# (https://sagora.walter-ai.cloud/sagora-app/android/, BuildConfig.UPDATE_FEED).
 # Usage : publish.sh [id de l'exécution GitHub]   (sans id : la dernière réussie)
 set -eu
 export PATH=/root/.local/bin:$PATH

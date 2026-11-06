@@ -41,7 +41,7 @@ android {
         versionCode = providers.gradleProperty("aiostreams.versionCode").map(String::toInt).getOrElse(1)
         buildConfigField("String", "WEB_URL", "\"\"")
         val feed = providers.gradleProperty("aiostreams.updateFeed")
-            .getOrElse("https://stremio.walter-ai.cloud/sagora-app")
+            .getOrElse("https://sagora.walter-ai.cloud/sagora-app")
         buildConfigField("String", "UPDATE_FEED", "\"$feed\"")
         resValue("string", "app_name", "Sagora")
         val inspectable = providers.gradleProperty("aiostreams.inspectable").getOrElse("false")

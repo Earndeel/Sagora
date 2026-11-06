@@ -27,7 +27,7 @@ with sync_playwright() as p:
         page = b.new_context(viewport={"width": 1400, "height": 800}, locale="fr-FR").new_page(); errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.on("console", lambda m: m.type in ("error", "warning") and errors.append("console: " + m.text[:160]))
-        page.goto("https://stremio.walter-ai.cloud/", wait_until="domcontentloaded")
+        page.goto("https://sagora.walter-ai.cloud/", wait_until="domcontentloaded")
     else:
         b, page, errors = open_app(p)
     page.wait_for_selector("input")

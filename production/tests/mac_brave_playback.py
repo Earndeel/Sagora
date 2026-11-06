@@ -3,7 +3,7 @@ connexion, « Qui regarde ? », teaser, Lecture d'un film TorBox, reprise, épis
 import json, subprocess, sys, time
 from playwright.sync_api import sync_playwright
 
-URL = "https://stremio.walter-ai.cloud/"
+URL = "https://sagora.walter-ai.cloud/"
 UUID = open("/apps/sagora/production/data/famille-uuid").read().strip()
 PW = subprocess.run(["walter-secret", "get", "AIOStreams préproduction · configuration Famille", "password"], capture_output=True, text=True).stdout.strip()
 OUT = "/apps/sagora/production/tests/out/"

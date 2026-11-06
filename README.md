@@ -6,7 +6,8 @@ L'application de streaming de la famille de Monsieur : une seule appli, façon N
 Malika, Zoé, Invité), des bandes-annonces automatiques et une lecture en un clic qui choisit la meilleure version
 pour la personne et l'appareil.
 
-- **Adresse** : https://stremio.walter-ai.cloud (navigateur, appli Android/TV, appli de bureau)
+- **Adresse** : https://sagora.walter-ai.cloud (navigateur, appli Android/TV, appli de bureau) ; l'ancienne adresse
+  https://stremio.walter-ai.cloud sert toujours la même chose pour les appareils déjà réglés.
 - **En service depuis** le 4 novembre 2026 ; nommée Sagora le 5 novembre.
 - **Socle** : [AIOStreams](https://github.com/Viren070/AIOStreams) (AGPL-3.0), avec notre propre interface et quelques
   services autour (TorBox par StremThru, Prowlarr pour C411/TR4KER et l'Usenet, relais de numérotation des épisodes).

@@ -1,4 +1,6 @@
 #!/bin/sh
+# HISTORIQUE (2026-11-04) : a basculé stremio.walter-ai.cloud vers AIOStreams. Depuis le 2026-11-06 l'adresse est
+# sagora.walter-ai.cloud (voir docs/EXPLOITATION.md) ; ce script ne sert plus.
 # Bascule stremio.walter-ai.cloud de l'ancien Stremio Web (localhost:18080) vers l'application AIOStreams
 # (entrée nginx localhost:18085). Seule la règle de ce domaine change dans le tunnel ; DNS inchangé.
 # Retour arrière : rollback-domain.sh
