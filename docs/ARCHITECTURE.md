@@ -10,7 +10,7 @@ Sagora = **AIOStreams** (agrégateur de sources + serveur compatible Jellyfin + 
  Appareils de la famille                      VM w-alter (Docker, pile « aiostreams »)
  ─────────────────────                        ─────────────────────────────────────────────────────────
  navigateur, appli Android/TV,  ──HTTPS──▶ tunnel Cloudflare ──▶ aiostreams-front (nginx, :18085)
- appli de bureau                 sagora.walter-ai.cloud               │  /             → /jellyfin/web/ (« Qui regarde ? »)
+ appli de bureau                 sagora.walter-ai.cloud               │  /             → notre interface (connexion Lucas)
                                                                       │  /logo.png…    → front/brand/ (logo Sagora)
                                                                       │  /sagora-app/  → mises à jour de l'appli Android
                                                                       │  /prowlarr     → Prowlarr (Cloudflare Access)

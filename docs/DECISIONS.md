@@ -18,6 +18,8 @@ Ce qui fait règle pour Sagora, avec sa date. Une décision plus récente rempla
 | 2026-11-05 | L'appli Android Sagora est construite par un **dépôt GitHub privé** (`Earndeel/sagora`). |
 | 2026-11-06 | **Tout Sagora est dans `/apps/sagora`, qui est aussi le dépôt GitHub `Earndeel/sagora`**, documenté depuis le début. |
 | 2026-11-06 | **L'adresse devient https://sagora.walter-ai.cloud** (« remplacer stremio.walter-ai.cloud par sagora.walter-ai.cloud »). L'ancienne adresse reste servie pour les appareils déjà réglés. |
+| 2026-11-06 | **Connexion « Lucas »** avec le mot de passe choisi par Monsieur (mot de passe de toute la configuration Famille, dans Bitwarden). |
+| 2026-11-06 | **Sagora à la racine du site** : pas de `/jellyfin` ni `/stremio` dans l'adresse (« c'est pas élégant ni intégré ») ; ce sont des adresses techniques des applis et addons. |
 
 ## Sources, TorBox et trackers
 

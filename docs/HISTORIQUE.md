@@ -83,6 +83,13 @@ https://sagora.walter-ai.cloud** (DNS, tunnel, protection de /prowlarr, règle d
 ses prochaines versions). L'ancienne adresse continue de servir la même chose : le dongle et les navigateurs déjà
 connectés n'ont rien à refaire.
 
+Ensuite :
+
+- **Connexion « Lucas »** et un nouveau mot de passe Famille choisi par Monsieur (il déconnecte les appareils une fois) ;
+  deux raccourcis d'AIOStreams qui, avec un alias, ouvraient l'addon ou les profils **sans mot de passe** sont fermés.
+- « Pourquoi /jellyfin ou /stremio ? C'est pas élégant ni intégré » → **Sagora s'ouvre à la racine,
+  https://sagora.walter-ai.cloud/** ; `/jellyfin` et `/stremio` restent invisibles, pour les applis et les addons.
+
 ## Ouvert
 
 - Lire un seul épisode dans un pack de saison (reporté par Monsieur).
