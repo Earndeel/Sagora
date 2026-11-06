@@ -12,7 +12,7 @@ CHECKS = {
     "entrée": "http://127.0.0.1:18085/jellyfin/web/",
     "prowlarr (index Usenet)": "http://127.0.0.1:19696/prowlarr/ping",
     "stremthru (relais TorBox)": "http://127.0.0.1:18095/v0/health",
-    "public": "https://stremio.walter-ai.cloud/api/v1/health",
+    "public": "https://sagora.walter-ai.cloud/api/v1/health",
 }
 
 
@@ -56,11 +56,11 @@ if down:
     state["failures"] += 1
     if state["failures"] >= 3 and not state["notified"]:
         state["notified"] = telegram(
-            "Stremio familial (stremio.walter-ai.cloud) en panne depuis environ 15 min : "
+            "Sagora (sagora.walter-ai.cloud) en panne depuis environ 15 min : "
             + ", ".join(down) + " ne répond pas, la relance automatique n'a pas suffi. Détails : /apps/sagora/README.md.")
 else:
     if state.get("notified"):
-        telegram("Stremio familial (stremio.walter-ai.cloud) fonctionne de nouveau.")
+        telegram("Sagora (sagora.walter-ai.cloud) fonctionne de nouveau.")
     state = {"failures": 0, "notified": False}
 state.update(last=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), result=result, healed=healed)
 STATE.write_text(json.dumps(state, ensure_ascii=False))
