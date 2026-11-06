@@ -1,0 +1,934 @@
+diff --git a/src/components/Video/Video.js b/src/components/Video/Video.js
+index e52ef8a0..146a3463 100644
+--- a/src/components/Video/Video.js
++++ b/src/components/Video/Video.js
+@@ -15,6 +15,7 @@ const { usePlatform } = require('stremio/common/Platform');
+ const { formatEpgTimeRange } = require('stremio/common/EPG');
+ const { getInterfaceRect } = require('stremio/common/interfaceScale');
+ const VideoPlaceholder = require('./VideoPlaceholder');
++const { load: loadQuickPlaySettings } = require('stremio/family/quickplay/settings');
+ const styles = require('./styles');
+ 
+ const VideoLabel = React.forwardRef(({ shouldScroll, ...props }, ref) => {
+@@ -113,7 +114,9 @@ const Video = ({ className, id, title, thumbnail, season, episode, released, upc
+         event.preventDefault();
+         event.stopPropagation();
+         selectVideo();
+-        if (deepLinks && typeof deepLinks.player === 'string') {
++        if (process.env.FAMILY_QUICKPLAY === 'true' && loadQuickPlaySettings().enabled && deepLinks && typeof deepLinks.metaDetailsStreams === 'string') {
++            navigate(toPath(deepLinks.metaDetailsStreams));
++        } else if (deepLinks && typeof deepLinks.player === 'string') {
+             navigate(toPath(deepLinks.player));
+         }
+     }, [deepLinks, navigate, selectVideo]);
+diff --git a/src/family/quickplay/README.md b/src/family/quickplay/README.md
+new file mode 100644
+index 00000000..abc8eb4b
+--- /dev/null
++++ b/src/family/quickplay/README.md
+@@ -0,0 +1,13 @@
++# QuickPlay — préproduction
++
++La compilation ordinaire garde QuickPlay hors service ; `FAMILY_QUICKPLAY=true` l'intègre à l'écran de sources, sans changer les addons ou leurs paramètres. L'interrupteur et les préférences sont locaux à l'appareil. La liste de sources reste visible. Un lecteur externe n'est pas lancé automatiquement.
++
++`adapter.js` conserve les structures `meta_details` et le lien natif de lecture sans requête additionnelle. L'identité de contenu est celle demandée à l'addon, pas une preuve du fichier ; les contradictions d'épisode repérables sont rejetées. Les caractéristiques inconnues sont distinctes d'une incompatibilité. Les noms de release sont des indices ; une langue obligatoire exige une information structurée.
++
++`trust.js` est volontairement très limité : un lien MP4 direct sur archive.org et deux flux publics précis sont reconnus, dont un uniquement dans la préproduction isolée. Les autres sources, y compris TorBox et celles qui se disent en cache, sont inconnues et exclues de l'automatisation tant que le risque de tracker privé n'est pas établi. Une classification ne doit pas être créée depuis le nom d'un fournisseur, une extension de fichier ou une simple icône de cache.
++
++Le lecteur réutilise les liens `deepLinks.player` après décodage local et comparaison stricte du flux réellement encodé avec la source admissible. Les liens de secours et le chemin de retour sont maintenus en mémoire uniquement ; deux alternatives au maximum sont autorisées après une erreur critique du lecteur. Le buffering n'est pas une erreur. Aucun accès à un tracker, au fichier ou à un service de débridage n'est déclenché pour classer les sources. La collecte attend 600 ms après la première source admise si d'autres addons chargent encore.
++
++Limites : pas de preuve que le résultat réellement renvoyé correspond à l'épisode, pas de vérification de ratio, pas de classification automatique TorBox, pas de véritables préférences par profil, pas de prise en charge des lecteurs externes ni de déduplication complète entre fournisseurs. La préférence VOSTFR/VO est encore un simple choix indicatif et ne garantit pas les pistes audio ou sous-titres. L'horodatage de démarrage effectif et le retour de lecture ne sont pas mesurés. Les résultats de tests fictifs ne prouvent pas la lecture réelle. Aucune activation en production avant validation de bout en bout.
++
++Tests : `node --test src/family/quickplay/*.test.cjs`.
+diff --git a/src/family/quickplay/adapter.js b/src/family/quickplay/adapter.js
+new file mode 100644
+index 00000000..70394238
+--- /dev/null
++++ b/src/family/quickplay/adapter.js
+@@ -0,0 +1,26 @@
++// Adapter for meta_details.streams. Release text is a hint, never a safety proof.
++const normalizeResults = (groups, { videoId, classify = () => 'unknown' }) => groups.flatMap((group) => {
++    if (group?.content?.type !== 'Ready' || !Array.isArray(group.content.content)) return [];
++    return group.content.content.flatMap((stream) => {
++        if (typeof stream?.deepLinks?.player !== 'string') return [];
++        const text = `${stream.name || ''} ${stream.description || ''}`;
++        const resolution = text.match(/\b(2160|1080|720|480)p\b/i);
++        const episode = text.match(/\bS(\d{1,2})[ ._-]*E(\d{1,3})\b/i);
++        const vostfr = /\bVOSTFR\b/i.test(text);
++        const audioHint = vostfr || /\bVO\b/i.test(text) ? 'original' : /\b(VF|VFF|VFQ|FRENCH|TRUEFRENCH)\b/i.test(text) ? 'fr' : null;
++        return [{
++            id: stream.deepLinks.player,
++            playerLink: stream.deepLinks.player,
++            addon: { name: group.addon?.manifest?.name || '', transportUrl: group.addon?.transportUrl || '' },
++            raw: stream,
++            videoId,
++            identityConfidence: 'addon-request',
++            episodeHint: episode ? { season: Number(episode[1]), episode: Number(episode[2]) } : null,
++            provenance: classify(group.addon, stream),
++            audioHint,
++            subtitleHint: vostfr ? 'fr' : null,
++            resolutionHint: resolution ? Number(resolution[1]) : null,
++        }];
++    });
++});
++module.exports = { normalizeResults };
+diff --git a/src/family/quickplay/adapter.test.cjs b/src/family/quickplay/adapter.test.cjs
+new file mode 100644
+index 00000000..d79a36b6
+--- /dev/null
++++ b/src/family/quickplay/adapter.test.cjs
+@@ -0,0 +1,38 @@
++const { test } = require('node:test');
++const assert = require('node:assert/strict');
++const { normalizeResults } = require('./adapter');
++
++test('preserves the addon and player link while interpreting release text only as hints', () => {
++    const result = normalizeResults([{ addon: { manifest: { name: 'Example' }, transportUrl: 'https://addon.example/manifest.json' }, content: { type: 'Ready', content: [{ name: '1080p VF', description: 'H264', deepLinks: { player: '#/player/example' } }] } }], { videoId: 'tt123:1:2', classify: () => 'safe-direct' });
++    assert.equal(result.length, 1);
++    assert.equal(result[0].addon.name, 'Example');
++    assert.equal(result[0].playerLink, '#/player/example');
++    assert.equal(result[0].videoId, 'tt123:1:2');
++    assert.equal(result[0].identityConfidence, 'addon-request');
++    assert.equal(result[0].audioHint, 'fr');
++    assert.equal(result[0].resolutionHint, 1080);
++});
++
++test('accepts unknown optional media attributes but never an unknown tracker risk', () => {
++    const { select } = require('./select');
++    const policy = { videoId: 'tt123', audio: 'fr', maxResolution: 1080, codecs: ['h264'], hdr: ['sdr'], languageStrict: false };
++    const direct = { id: '1', videoId: 'tt123', provenance: 'safe-direct', audioHint: null, resolutionHint: null };
++    assert.equal(select([direct], policy).length, 1);
++    assert.equal(select([{ ...direct, provenance: 'unknown' }], policy).length, 0);
++});
++
++test('uses VOSTFR as a soft original-audio and French-subtitle hint', () => {
++    const items = normalizeResults([{ addon: {}, content: { type: 'Ready', content: [{ name: 'VOSTFR 720p', deepLinks: { player: '#/player/a' } }] } }], { videoId: 'movie', classify: () => 'safe-direct' });
++    assert.equal(items[0].audioHint, 'original');
++    assert.equal(items[0].subtitleHint, 'fr');
++});
++
++test('prefers French subtitle hints for VOSTFR and enforces strict subtitle evidence', () => {
++    const { select } = require('./select');
++    const common = { videoId: 'movie', provenance: 'safe-direct', audioHint: 'original' };
++    const vo = { ...common, id: 'a' };
++    const vostfr = { ...common, id: 'b', subtitleHint: 'fr' };
++    const policy = { videoId: 'movie', audio: 'original', subtitle: 'fr', maxResolution: 1080 };
++    assert.equal(select([vo, vostfr], policy)[0].id, 'b');
++    assert.equal(select([{ ...vostfr, audio: ['original'] }], { ...policy, languageStrict: true }).length, 0);
++});
+diff --git a/src/family/quickplay/attempt.js b/src/family/quickplay/attempt.js
+new file mode 100644
+index 00000000..854ae4c5
+--- /dev/null
++++ b/src/family/quickplay/attempt.js
+@@ -0,0 +1,16 @@
++// The caller must resolve only confirmed errors, never ordinary buffering, as failed.
++const attempt = async (releases, play, signal) => {
++    const seen = new Set();
++    for (const release of releases) {
++        if (signal?.aborted) return { status: 'cancelled' };
++        if (seen.has(release)) continue;
++        if (seen.size >= 3) break;
++        seen.add(release);
++        const result = await play(release, signal);
++        if (signal?.aborted) return { status: 'cancelled' };
++        if (result === 'started') return { status: 'started', release };
++        if (result !== 'failed') return { status: 'stopped' };
++    }
++    return { status: 'exhausted' };
++};
++module.exports = { attempt };
+diff --git a/src/family/quickplay/attempt.test.cjs b/src/family/quickplay/attempt.test.cjs
+new file mode 100644
+index 00000000..1a9eaff8
+--- /dev/null
++++ b/src/family/quickplay/attempt.test.cjs
+@@ -0,0 +1,45 @@
++const { test } = require('node:test');
++const assert = require('node:assert/strict');
++const { attempt } = require('./attempt');
++
++test('tries at most three distinct releases after confirmed errors', async () => {
++    const seen = [];
++    const outcome = await attempt(['a', 'a', 'b', 'c', 'd'], async (id) => {
++        seen.push(id);
++        return 'failed';
++    });
++    assert.deepEqual(seen, ['a', 'b', 'c']);
++    assert.equal(outcome.status, 'exhausted');
++});
++
++test('stops after the next release starts', async () => {
++    const seen = [];
++    const result = await attempt(['a', 'b', 'c'], async (id) => {
++        seen.push(id);
++        return id === 'b' ? 'started' : 'failed';
++    });
++    assert.deepEqual(seen, ['a', 'b']);
++    assert.deepEqual(result, { status: 'started', release: 'b' });
++});
++
++test('does not treat an uncertain state as a confirmed failure', async () => {
++    const seen = [];
++    const result = await attempt(['a', 'b'], async (id) => {
++        seen.push(id);
++        return 'buffering';
++    });
++    assert.deepEqual(seen, ['a']);
++    assert.equal(result.status, 'stopped');
++});
++
++test('cancelling while a release is loading prevents another attempt', async () => {
++    const controller = new AbortController();
++    const seen = [];
++    const result = await attempt(['a', 'b'], async (id) => {
++        seen.push(id);
++        controller.abort();
++        return 'failed';
++    }, controller.signal);
++    assert.deepEqual(seen, ['a']);
++    assert.equal(result.status, 'cancelled');
++});
+diff --git a/src/family/quickplay/collect.js b/src/family/quickplay/collect.js
+new file mode 100644
+index 00000000..ad4cd7a3
+--- /dev/null
++++ b/src/family/quickplay/collect.js
+@@ -0,0 +1,30 @@
++// Callers own addon requests and may abort them; late responses are ignored.
++const collect = (requests, { timeoutMs = 1500, signal } = {}) => new Promise((resolve) => {
++    const results = [];
++    let pending = requests.length;
++    let finished = false;
++    let timer;
++    const finish = () => {
++        if (finished) return;
++        finished = true;
++        clearTimeout(timer);
++        signal?.removeEventListener('abort', cancel);
++        resolve(results.slice());
++    };
++    const cancel = () => {
++        results.length = 0;
++        finish();
++    };
++    if (signal?.aborted) return cancel();
++    signal?.addEventListener('abort', cancel, { once: true });
++    timer = setTimeout(finish, Math.max(0, timeoutMs));
++    if (!pending) return finish();
++    for (const request of requests) {
++        Promise.resolve(request).then((items) => {
++            if (!finished && Array.isArray(items)) results.push(...items);
++        }, () => undefined).finally(() => {
++            if (--pending === 0) finish();
++        });
++    }
++});
++module.exports = { collect };
+diff --git a/src/family/quickplay/collect.test.cjs b/src/family/quickplay/collect.test.cjs
+new file mode 100644
+index 00000000..b3fe02c4
+--- /dev/null
++++ b/src/family/quickplay/collect.test.cjs
+@@ -0,0 +1,10 @@
++const { test } = require('node:test');
++const assert = require('node:assert/strict');
++const { collect } = require('./collect');
++
++test('does not wait indefinitely for a slow addon', async () => {
++    const fast = Promise.resolve([{ id: 'fast' }]);
++    const slow = new Promise(() => undefined);
++    const result = await collect([fast, slow], { timeoutMs: 20 });
++    assert.deepEqual(result, [{ id: 'fast' }]);
++});
+diff --git a/src/family/quickplay/controller.js b/src/family/quickplay/controller.js
+new file mode 100644
+index 00000000..e3bd11fe
+--- /dev/null
++++ b/src/family/quickplay/controller.js
+@@ -0,0 +1,15 @@
++const { collect } = require('./collect');
++const { select } = require('./select');
++const { attempt } = require('./attempt');
++
++// Adapters must supply verified metadata and map a release ID to the original
++// Stremio player action. This controller does not fetch media or store URLs.
++const quickPlay = async ({ requests, policy, play, signal, timeoutMs, enabled = false }) => {
++    if (!enabled) return { status: 'disabled' };
++    const items = await collect(requests, { signal, timeoutMs });
++    if (signal?.aborted) return { status: 'cancelled' };
++    const eligible = select(items, policy);
++    if (!eligible.length) return { status: 'no-compatible-source' };
++    return attempt(eligible.map((item) => item.id), play, signal);
++};
++module.exports = { quickPlay };
+diff --git a/src/family/quickplay/controller.test.cjs b/src/family/quickplay/controller.test.cjs
+new file mode 100644
+index 00000000..c781c703
+--- /dev/null
++++ b/src/family/quickplay/controller.test.cjs
+@@ -0,0 +1,46 @@
++const { test } = require('node:test');
++const assert = require('node:assert/strict');
++const { quickPlay } = require('./controller');
++
++test('after an eligible source fails, tries the next eligible source', async () => {
++    const policy = { videoId: 'show:1:2', audio: 'fr', maxResolution: 1080, codecs: ['h264'], hdr: ['sdr'] };
++    const base = { videoId: 'show:1:2', provenance: 'public_verified', audio: ['fr'], codec: 'h264', hdr: 'sdr', resolution: 1080 };
++    const sources = [{ ...base, id: 'a' }, { ...base, id: 'b' }];
++    const tried = [];
++    const result = await quickPlay({ enabled: true, requests: [Promise.resolve(sources)], policy, play: async (id) => {
++        tried.push(id);
++        return id === 'a' ? 'failed' : 'started';
++    }});
++    assert.deepEqual(tried, ['a', 'b']);
++    assert.equal(result.status, 'started');
++});
++
++test('unknown and private sources never reach playback', async () => {
++    const policy = { videoId: 'movie', audio: 'fr', maxResolution: 1080, codecs: ['h264'], hdr: ['sdr'] };
++    const base = { videoId: 'movie', audio: ['fr'], codec: 'h264', hdr: 'sdr', resolution: 1080, cached: true };
++    let called = false;
++    const result = await quickPlay({ enabled: true, requests: [Promise.resolve([
++        { ...base, id: 'private', provenance: 'private' },
++        { ...base, id: 'unknown', provenance: 'unknown' },
++    ])], policy, play: async () => { called = true; return 'started'; } });
++    assert.equal(called, false);
++    assert.equal(result.status, 'no-compatible-source');
++});
++
++test('cancellation before addon results prevents playback', async () => {
++    const abort = new AbortController();
++    abort.abort();
++    let called = false;
++    const result = await quickPlay({ enabled: true, requests: [Promise.resolve([])], policy: {}, signal: abort.signal, play: async () => { called = true; } });
++    assert.equal(called, false);
++    assert.equal(result.status, 'cancelled');
++});
++
++test('feature is disabled unless explicitly enabled', async () => {
++    const policy = { videoId: 'movie', audio: 'fr', maxResolution: 1080, codecs: ['h264'], hdr: ['sdr'] };
++    const source = { id: 'a', videoId: 'movie', provenance: 'public_verified', audio: ['fr'], codec: 'h264', hdr: 'sdr', resolution: 1080 };
++    let called = false;
++    const result = await quickPlay({ requests: [Promise.resolve([source])], policy, play: async () => { called = true; return 'started'; } });
++    assert.equal(called, false);
++    assert.equal(result.status, 'disabled');
++});
+diff --git a/src/family/quickplay/deduplicate.js b/src/family/quickplay/deduplicate.js
+new file mode 100644
+index 00000000..b6eb472a
+--- /dev/null
++++ b/src/family/quickplay/deduplicate.js
+@@ -0,0 +1,10 @@
++const deduplicate = (items) => {
++    const seen = new Set();
++    return items.filter((item) => {
++        const key = item.raw?.infoHash ? `${item.raw.infoHash.toLowerCase()}:${item.raw.fileIdx ?? ''}` : item.raw?.url;
++        if (!key || seen.has(key)) return false;
++        seen.add(key);
++        return true;
++    });
++};
++module.exports = { deduplicate };
+diff --git a/src/family/quickplay/deduplicate.test.cjs b/src/family/quickplay/deduplicate.test.cjs
+new file mode 100644
+index 00000000..6b62d2de
+--- /dev/null
++++ b/src/family/quickplay/deduplicate.test.cjs
+@@ -0,0 +1,10 @@
++const { test } = require('node:test');
++const assert = require('node:assert/strict');
++const { deduplicate } = require('./deduplicate');
++
++test('does not retry the same public file through different addon links', () => {
++    const a = { id: 'a', raw: { url: 'https://archive.org/download/a/a.mp4' } };
++    const b = { id: 'b', raw: { url: 'https://archive.org/download/a/a.mp4' } };
++    const c = { id: 'c', raw: { url: 'https://archive.org/download/a/b.mp4' } };
++    assert.deepEqual(deduplicate([a, b, c]).map((x) => x.id), ['a', 'c']);
++});
+diff --git a/src/family/quickplay/progressive.js b/src/family/quickplay/progressive.js
+new file mode 100644
+index 00000000..06451111
+--- /dev/null
++++ b/src/family/quickplay/progressive.js
+@@ -0,0 +1,5 @@
++const decision = ({ candidateCount, loading, waitedMs, windowMs }) => {
++    if (!candidateCount) return loading ? 'wait' : 'manual';
++    return !loading || waitedMs >= windowMs ? 'play' : 'wait';
++};
++module.exports = { decision };
+diff --git a/src/family/quickplay/progressive.test.cjs b/src/family/quickplay/progressive.test.cjs
+new file mode 100644
+index 00000000..b503ab9b
+--- /dev/null
++++ b/src/family/quickplay/progressive.test.cjs
+@@ -0,0 +1,8 @@
++const { test } = require('node:test');
++const assert = require('node:assert/strict');
++const { decision } = require('./progressive');
++
++test('launches after the short collection window despite an addon still loading', () => {
++    assert.equal(decision({ candidateCount: 1, loading: 1, waitedMs: 700, windowMs: 600 }), 'play');
++    assert.equal(decision({ candidateCount: 1, loading: 1, waitedMs: 100, windowMs: 600 }), 'wait');
++});
+diff --git a/src/family/quickplay/select.js b/src/family/quickplay/select.js
+new file mode 100644
+index 00000000..1d08fb85
+--- /dev/null
++++ b/src/family/quickplay/select.js
+@@ -0,0 +1,26 @@
++// Unknown media attributes are not the same as unknown tracker safety.
++const select = (sources, policy) => sources.filter((source) => {
++    if (typeof source.id !== 'string' || !source.id || source.videoId !== policy.videoId) return false;
++    if (!['public_verified', 'safe-direct'].includes(source.provenance)) return false;
++    if (source.provenance === 'public_verified') {
++        return Array.isArray(source.audio) && source.audio.includes(policy.audio) &&
++            Number.isFinite(source.resolution) && source.resolution > 0 &&
++            Number.isFinite(policy.maxResolution) && source.resolution <= policy.maxResolution &&
++            Array.isArray(policy.codecs) && policy.codecs.includes(source.codec) &&
++            Array.isArray(policy.hdr) && policy.hdr.includes(source.hdr);
++    }
++    if (source.episodeHint && policy.episode &&
++        (source.episodeHint.season !== policy.episode.season || source.episodeHint.episode !== policy.episode.episode)) return false;
++    if (source.resolutionHint && source.resolutionHint > policy.maxResolution) return false;
++    if (policy.languageStrict && (!Array.isArray(source.audio) || !source.audio.includes(policy.audio))) return false;
++    if (policy.languageStrict && policy.subtitle && (!Array.isArray(source.subtitles) || !source.subtitles.includes(policy.subtitle))) return false;
++    if (source.codec && Array.isArray(policy.codecs) && !policy.codecs.includes(source.codec)) return false;
++    if (source.hdr && Array.isArray(policy.hdr) && !policy.hdr.includes(source.hdr)) return false;
++    return true;
++}).sort((a, b) => {
++    const language = Number(b.audioHint === policy.audio) - Number(a.audioHint === policy.audio);
++    const subtitles = policy.subtitle ? Number(b.subtitleHint === policy.subtitle) - Number(a.subtitleHint === policy.subtitle) : 0;
++    return language || subtitles || (Number(b.cached === true) - Number(a.cached === true)) ||
++        ((b.resolutionHint || b.resolution || 0) - (a.resolutionHint || a.resolution || 0)) || String(a.id).localeCompare(String(b.id));
++});
++module.exports = { select };
+diff --git a/src/family/quickplay/select.test.cjs b/src/family/quickplay/select.test.cjs
+new file mode 100644
+index 00000000..8fbbc5cc
+--- /dev/null
++++ b/src/family/quickplay/select.test.cjs
+@@ -0,0 +1,40 @@
++const { test } = require('node:test');
++const assert = require('node:assert/strict');
++const { select } = require('./select');
++
++test('rejects a private source even when it is cached', () => {
++    const results = select([{ id: 'one', provenance: 'private', cached: true }], {});
++    assert.deepEqual(results, []);
++});
++
++test('accepts only the exact video with verified required audio and compatible video', () => {
++    const policy = { videoId: 'show:1:2', audio: 'fr', maxResolution: 1080, codecs: ['h264'], hdr: ['sdr'] };
++    const good = { id: 'a', videoId: 'show:1:2', provenance: 'public_verified', audio: ['fr'], resolution: 1080, codec: 'h264', hdr: 'sdr' };
++    const results = select([
++        good,
++        { ...good, id: 'wrong', videoId: 'show:1:3' },
++        { ...good, id: 'unknown-audio', audio: null },
++        { ...good, id: '4k', resolution: 2160 },
++        { ...good, id: 'dv', hdr: 'dolby-vision' },
++        { ...good, id: 'unknown-codec', codec: null },
++        { ...good, id: 'unknown-origin', provenance: 'unknown' },
++    ], policy);
++    assert.deepEqual(results.map((x) => x.id), ['a']);
++});
++
++test('prefers a cached source closer to the device resolution without changing hard constraints', () => {
++    const policy = { videoId: 'movie', audio: 'fr', maxResolution: 1080, codecs: ['h264'], hdr: ['sdr'] };
++    const base = { videoId: 'movie', provenance: 'public_verified', audio: ['fr'], codec: 'h264', hdr: 'sdr' };
++    const sources = [
++        { ...base, id: '720', resolution: 720, cached: true },
++        { ...base, id: '1080', resolution: 1080, cached: true },
++        { ...base, id: '4k', resolution: 2160, cached: true },
++    ];
++    assert.deepEqual(select(sources, policy).map((x) => x.id), ['1080', '720']);
++});
++
++test('rejects a source without a stable release identity', () => {
++    const policy = { videoId: 'movie', audio: 'fr', maxResolution: 1080, codecs: ['h264'], hdr: ['sdr'] };
++    const source = { videoId: 'movie', provenance: 'public_verified', audio: ['fr'], resolution: 1080, codec: 'h264', hdr: 'sdr' };
++    assert.deepEqual(select([source], policy), []);
++});
+diff --git a/src/family/quickplay/session.js b/src/family/quickplay/session.js
+new file mode 100644
+index 00000000..a55b091d
+--- /dev/null
++++ b/src/family/quickplay/session.js
+@@ -0,0 +1,25 @@
++// Player links may contain sensitive data: keep them only in memory.
++const createSession = () => {
++    let routes = [];
++    let index = 0;
++    let videoId = null;
++    let sourcePath = null;
++    return {
++        start(id, candidates, origin) {
++            videoId = id;
++            sourcePath = origin || null;
++            routes = [...new Set(candidates)].slice(0, 3);
++            index = 0;
++        },
++        next(current) {
++            if (current !== routes[index] || index + 1 >= routes.length) return null;
++            return routes[++index];
++        },
++        source(current) { return current === routes[index] ? sourcePath : null; },
++        matches(id) { return videoId === id; },
++        clear() { routes = []; index = 0; videoId = null; sourcePath = null; }
++    };
++};
++const session = createSession();
++const nextOnError = (activeSession, current, error) => error?.critical === true ? activeSession.next(current) : null;
++module.exports = { createSession, session, nextOnError };
+diff --git a/src/family/quickplay/session.test.cjs b/src/family/quickplay/session.test.cjs
+new file mode 100644
+index 00000000..20d5fa45
+--- /dev/null
++++ b/src/family/quickplay/session.test.cjs
+@@ -0,0 +1,29 @@
++const { test } = require('node:test');
++const assert = require('node:assert/strict');
++const { createSession } = require('./session');
++
++test('retries only twice and only for the active player route', () => {
++    const session = createSession();
++    session.start('episode', ['/player/a', '/player/b', '/player/c', '/player/d']);
++    assert.equal(session.next('/player/not-current'), null);
++    assert.equal(session.next('/player/a'), '/player/b');
++    assert.equal(session.next('/player/b'), '/player/c');
++    assert.equal(session.next('/player/c'), null);
++});
++
++test('only a critical player error advances to an alternative', () => {
++    const { nextOnError } = require('./session');
++    const session = createSession();
++    session.start('movie', ['/player/a', '/player/b']);
++    assert.equal(nextOnError(session, '/player/a', { critical: false }), null);
++    assert.equal(nextOnError(session, '/player/a', { critical: true }), '/player/b');
++});
++
++test('retains the manual source list route only for the active session', () => {
++    const session = createSession();
++    session.start('movie', ['/player/a'], '/detail/movie');
++    assert.equal(session.source('/player/a'), '/detail/movie');
++    assert.equal(session.source('/player/other'), null);
++    session.clear();
++    assert.equal(session.source('/player/a'), null);
++});
+diff --git a/src/family/quickplay/settings.js b/src/family/quickplay/settings.js
+new file mode 100644
+index 00000000..224bc1d4
+--- /dev/null
++++ b/src/family/quickplay/settings.js
+@@ -0,0 +1,17 @@
++const KEY = 'stremio-family-quickplay-v1';
++const sanitize = (v = {}) => ({
++    enabled: v.enabled !== false,
++    audio: ['vf', 'vostfr', 'vo'].includes(v.audio) ? v.audio : 'vf',
++    strict: v.strict === true,
++    collectionMs: [0, 600, 1500].includes(v.collectionMs) ? v.collectionMs : 600,
++    maxResolution: [480, 720, 1080, 2160].includes(v.maxResolution) ? v.maxResolution : 1080,
++});
++const load = () => {
++    try { return sanitize(JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (_) { return sanitize(); }
++};
++const save = (value) => {
++    const prefs = sanitize(value);
++    try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch (_) { /* private mode */ }
++    return prefs;
++};
++module.exports = { sanitize, load, save };
+diff --git a/src/family/quickplay/settings.test.cjs b/src/family/quickplay/settings.test.cjs
+new file mode 100644
+index 00000000..3138d77e
+--- /dev/null
++++ b/src/family/quickplay/settings.test.cjs
+@@ -0,0 +1,14 @@
++const { test } = require('node:test');
++const assert = require('node:assert/strict');
++const { sanitize } = require('./settings');
++
++test('keeps safe per-device preferences and rejects invalid values', () => {
++    assert.deepEqual(sanitize({ enabled: false, audio: 'vostfr', strict: true, maxResolution: 720 }), { enabled: false, audio: 'vostfr', strict: true, collectionMs: 600, maxResolution: 720 });
++    assert.equal(sanitize({ audio: 'invalid', maxResolution: 999999 }).audio, 'vf');
++    assert.equal(sanitize({ audio: 'invalid', maxResolution: 999999 }).maxResolution, 1080);
++});
++
++test('limits the addon collection window to supported values', () => {
++    assert.equal(sanitize({ collectionMs: 1500 }).collectionMs, 1500);
++    assert.equal(sanitize({ collectionMs: 60000 }).collectionMs, 600);
++});
+diff --git a/src/family/quickplay/trust.js b/src/family/quickplay/trust.js
+new file mode 100644
+index 00000000..d2a2dd8f
+--- /dev/null
++++ b/src/family/quickplay/trust.js
+@@ -0,0 +1,21 @@
++// Stremio's public-domain repository explicitly lists this public direct video.
++// No decision is inferred from a provider name, a cache icon, or a URL suffix.
++const classify = (addon, stream) => {
++    if (addon?.transportUrl === 'https://caching.stremio.net/publicdomainmovies.now.sh/manifest.json' &&
++        stream?.url === 'http://distribution.bbb3d.renderfarming.net/video/mp4/bbb_sunflower_1080p_30fps_normal.mp4' &&
++        !stream?.infoHash && !stream?.externalUrl) return 'safe-direct';
++    if (process.env.FAMILY_QUICKPLAY === 'true' &&
++        addon?.transportUrl === 'http://127.0.0.1:18081/quickplay-test/manifest.json' &&
++        stream?.url === 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4' &&
++        !stream?.infoHash && !stream?.externalUrl) return 'safe-direct';
++    if (!stream?.infoHash && !stream?.externalUrl && typeof stream?.url === 'string') {
++        try {
++            const url = new URL(stream.url);
++            if (url.protocol === 'https:' && url.hostname === 'archive.org' && !url.port &&
++                !url.username && !url.password && !url.search && !url.hash &&
++                /^\/download\/[^/]+\/[^/]+\.mp4$/i.test(url.pathname)) return 'safe-direct';
++        } catch (_) { return 'unknown'; }
++    }
++    return 'unknown';
++};
++module.exports = { classify };
+diff --git a/src/family/quickplay/trust.test.cjs b/src/family/quickplay/trust.test.cjs
+new file mode 100644
+index 00000000..6eadb34a
+--- /dev/null
++++ b/src/family/quickplay/trust.test.cjs
+@@ -0,0 +1,29 @@
++const { test } = require('node:test');
++const assert = require('node:assert/strict');
++const { classify } = require('./trust');
++
++test('does not infer private tracker safety from a debrid label or cache flag', () => {
++    assert.equal(classify({ manifest: { name: 'TorBox' } }, { url: 'https://example.invalid/stream', cached: true }), 'unknown');
++});
++
++test('permits a specifically verified public domain direct video only from the official addon', () => {
++    const addon = { transportUrl: 'https://caching.stremio.net/publicdomainmovies.now.sh/manifest.json' };
++    const stream = { url: 'http://distribution.bbb3d.renderfarming.net/video/mp4/bbb_sunflower_1080p_30fps_normal.mp4' };
++    assert.equal(classify(addon, stream), 'safe-direct');
++});
++
++test('allows only the explicit isolated preview addon and its exact public test clip', () => {
++    process.env.FAMILY_QUICKPLAY = 'true';
++    const addon = { transportUrl: 'http://127.0.0.1:18081/quickplay-test/manifest.json' };
++    const clip = { url: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4' };
++    assert.equal(classify(addon, clip), 'safe-direct');
++    assert.equal(classify(addon, { url: 'https://example.invalid/stream' }), 'unknown');
++    delete process.env.FAMILY_QUICKPLAY;
++});
++
++test('accepts a direct HTTPS archive.org media URL without relying on an addon name', () => {
++    const stream = { url: 'https://archive.org/download/feature-film/feature-film.mp4' };
++    assert.equal(classify({ manifest: { name: 'Any addon' } }, stream), 'safe-direct');
++    assert.equal(classify({}, { url: stream.url + '?token=unknown' }), 'unknown');
++    assert.equal(classify({}, { ...stream, infoHash: 'hash' }), 'unknown');
++});
+diff --git a/src/family/quickplay/verify.js b/src/family/quickplay/verify.js
+new file mode 100644
+index 00000000..fbf51a8a
+--- /dev/null
++++ b/src/family/quickplay/verify.js
+@@ -0,0 +1,14 @@
++// The player's encoded stream is decoded locally by Stremio; never log either URL.
++const verifyPlayerLink = async (candidate, decodeStream) => {
++    const link = candidate.playerLink;
++    if (typeof link !== 'string' || typeof candidate.raw?.url !== 'string') return false;
++    const match = link.replace(/^#/, '').match(/^\/player\/([^/?#]+)(?:\/|\?|$)/);
++    if (!match) return false;
++    try {
++        const decoded = await decodeStream(decodeURIComponent(match[1]));
++        return decoded?.url === candidate.raw.url && !decoded?.infoHash && !decoded?.externalUrl;
++    } catch (_) {
++        return false;
++    }
++};
++module.exports = { verifyPlayerLink };
+diff --git a/src/family/quickplay/verify.test.cjs b/src/family/quickplay/verify.test.cjs
+new file mode 100644
+index 00000000..a19bbb3c
+--- /dev/null
++++ b/src/family/quickplay/verify.test.cjs
+@@ -0,0 +1,10 @@
++const { test } = require('node:test');
++const assert = require('node:assert/strict');
++const { verifyPlayerLink } = require('./verify');
++
++test('rejects a player link that decodes to a different or torrent source', async () => {
++    const candidate = { playerLink: '#/player/encoded', raw: { url: 'https://archive.org/download/a/a.mp4' } };
++    assert.equal(await verifyPlayerLink(candidate, async () => ({ url: 'https://other.example/stream' })), false);
++    assert.equal(await verifyPlayerLink(candidate, async () => ({ url: candidate.raw.url, infoHash: 'hash' })), false);
++    assert.equal(await verifyPlayerLink(candidate, async () => ({ url: candidate.raw.url })), true);
++});
+diff --git a/src/routes/MetaDetails/MetaDetails.js b/src/routes/MetaDetails/MetaDetails.js
+index 7cba4c88..3e2f971e 100644
+--- a/src/routes/MetaDetails/MetaDetails.js
++++ b/src/routes/MetaDetails/MetaDetails.js
+@@ -250,7 +250,9 @@ const MetaDetails = () => {
+                     streamPath !== null ?
+                         <StreamsList
+                             className={styles['streams-list']}
++                            key={streamPath.id}
+                             streams={metaDetails.streams}
++                            requestId={streamPath.id === urlParams.videoId ? streamPath.id : null}
+                             video={video}
+                             type={streamPath.type}
+                             externalPlayerCallbackCanMarkWatched={externalPlayerCallbackCanMarkWatched}
+diff --git a/src/routes/MetaDetails/QuickPlay/QuickPlay.js b/src/routes/MetaDetails/QuickPlay/QuickPlay.js
+new file mode 100644
+index 00000000..d5674e55
+--- /dev/null
++++ b/src/routes/MetaDetails/QuickPlay/QuickPlay.js
+@@ -0,0 +1,104 @@
++// Experimental integration: enabled only in an explicitly configured preview build.
++const React = require('react');
++const PropTypes = require('prop-types');
++const { useTranslation } = require('react-i18next');
++const { useLocation, useNavigate } = require('react-router');
++const { useCore } = require('stremio/core');
++const { default: toPath } = require('stremio-router/toPath');
++const { normalizeResults } = require('stremio/family/quickplay/adapter');
++const { select } = require('stremio/family/quickplay/select');
++const { classify } = require('stremio/family/quickplay/trust');
++const { session } = require('stremio/family/quickplay/session');
++const { load, save } = require('stremio/family/quickplay/settings');
++const { verifyPlayerLink } = require('stremio/family/quickplay/verify');
++const { deduplicate } = require('stremio/family/quickplay/deduplicate');
++const styles = require('./styles');
++
++const QuickPlay = ({ streams, requestId, video, playerType }) => {
++    const { t } = useTranslation();
++    const navigate = useNavigate();
++    const core = useCore();
++    const location = useLocation();
++    const [settings, setSettings] = React.useState(load);
++    const latest = React.useRef(null);
++    const timer = React.useRef(null);
++    const launched = React.useRef(false);
++    const pending = React.useRef(false);
++    const mounted = React.useRef(true);
++    const loading = streams.some((group) => group.content?.type === 'Loading');
++    const candidates = React.useMemo(() => {
++        if (!requestId) return [];
++        const policy = {
++            videoId: requestId,
++            audio: settings.audio === 'vf' ? 'fr' : 'original',
++            subtitle: settings.audio === 'vostfr' ? 'fr' : null,
++            languageStrict: settings.strict,
++            maxResolution: settings.maxResolution,
++            episode: Number.isInteger(video?.season) && Number.isInteger(video?.episode) ? { season: video.season, episode: video.episode } : null,
++        };
++        return select(normalizeResults(streams, { videoId: requestId, classify }), policy);
++    }, [streams, requestId, settings, video]);
++    latest.current = { candidates, requestId, enabled: settings.enabled, settingsKey: JSON.stringify(settings), playerType, sourcePath: location.pathname + location.search };
++    const launch = React.useCallback(async () => {
++        timer.current = null;
++        const current = latest.current;
++        if (!current.enabled || current.playerType !== null || !current.requestId || !current.candidates.length || session.matches(current.requestId) || launched.current || pending.current) return;
++        pending.current = true;
++        const checks = await Promise.all(current.candidates.map((candidate) => verifyPlayerLink(candidate, core.transport.decodeStream)));
++        pending.current = false;
++        if (!mounted.current || !latest.current.enabled || latest.current.requestId !== current.requestId || latest.current.settingsKey !== current.settingsKey || latest.current.sourcePath !== current.sourcePath) return;
++        const routes = deduplicate(current.candidates.filter((candidate, index) => checks[index])).map((candidate) => toPath(candidate.playerLink));
++        if (!routes.length) return;
++        session.start(current.requestId, routes, current.sourcePath);
++        launched.current = true;
++        navigate(routes[0]);
++    }, [navigate, core.transport]);
++    React.useEffect(() => {
++        if (timer.current !== null) clearTimeout(timer.current);
++        timer.current = null;
++    }, [settings.collectionMs]);
++    React.useEffect(() => {
++        if (!settings.enabled || playerType !== null || !requestId || session.matches(requestId) || launched.current || !candidates.length) {
++            if (timer.current !== null) clearTimeout(timer.current);
++            timer.current = null;
++            return;
++        }
++        if (!loading) {
++            if (timer.current !== null) clearTimeout(timer.current);
++            timer.current = null;
++            launch();
++        } else if (timer.current === null) {
++            timer.current = setTimeout(launch, settings.collectionMs);
++        }
++    }, [settings.enabled, settings.collectionMs, playerType, requestId, candidates, loading, launch]);
++    React.useEffect(() => {
++        mounted.current = true;
++        return () => {
++            mounted.current = false;
++            if (timer.current !== null) clearTimeout(timer.current);
++        };
++    }, []);
++    const update = (patch) => setSettings((old) => save({ ...old, ...patch }));
++    return <div className={styles['quickplay']}>
++        <label><input type='checkbox' checked={settings.enabled} onChange={(event) => update({ enabled: event.target.checked })} />{t('FAMILY_QUICKPLAY_ENABLE', { defaultValue: 'Lecture automatique (préproduction)' })}</label>
++        <label>{t('FAMILY_QUICKPLAY_LANGUAGE', { defaultValue: 'Langue' })} <select value={settings.audio} onChange={(event) => update({ audio: event.target.value })}>
++            <option value='vf'>{t('FAMILY_QUICKPLAY_VF', { defaultValue: 'VF' })}</option><option value='vostfr'>{t('FAMILY_QUICKPLAY_VOSTFR', { defaultValue: 'VOSTFR' })}</option><option value='vo'>{t('FAMILY_QUICKPLAY_VO', { defaultValue: 'VO' })}</option>
++        </select></label>
++        <label><input type='checkbox' checked={settings.strict} onChange={(event) => update({ strict: event.target.checked })} />{t('FAMILY_QUICKPLAY_LANGUAGE_REQUIRED', { defaultValue: 'Langue obligatoire' })}</label>
++        <label>{t('FAMILY_QUICKPLAY_MAX_QUALITY', { defaultValue: 'Qualité maximale' })} <select value={settings.maxResolution} onChange={(event) => update({ maxResolution: Number(event.target.value) })}>
++            <option value='480'>{t('FAMILY_QUICKPLAY_480', { defaultValue: '480p' })}</option><option value='720'>{t('FAMILY_QUICKPLAY_720', { defaultValue: '720p' })}</option><option value='1080'>{t('FAMILY_QUICKPLAY_1080', { defaultValue: '1080p' })}</option><option value='2160'>{t('FAMILY_QUICKPLAY_2160', { defaultValue: '2160p' })}</option>
++        </select></label>
++        <label>{t('FAMILY_QUICKPLAY_WINDOW', { defaultValue: 'Attente des sources' })} <select value={settings.collectionMs} onChange={(event) => update({ collectionMs: Number(event.target.value) })}>
++            <option value='0'>{t('FAMILY_QUICKPLAY_IMMEDIATE', { defaultValue: 'Immédiate' })}</option><option value='600'>{t('FAMILY_QUICKPLAY_600MS', { defaultValue: '0,6 seconde' })}</option><option value='1500'>{t('FAMILY_QUICKPLAY_1500MS', { defaultValue: '1,5 seconde' })}</option>
++        </select></label>
++        {settings.enabled && !loading && !candidates.length ? <span>{t('FAMILY_QUICKPLAY_MANUAL', { defaultValue: 'Aucune source automatiquement admissible : choisissez une source ci-dessous.' })}</span> : null}
++        {settings.enabled && playerType !== null ? <span>{t('FAMILY_QUICKPLAY_INTERNAL_PLAYER', { defaultValue: 'La sélection automatique nécessite le lecteur intégré.' })}</span> : null}
++    </div>;
++};
++QuickPlay.propTypes = {
++    streams: PropTypes.arrayOf(PropTypes.object).isRequired,
++    requestId: PropTypes.string,
++    video: PropTypes.shape({ season: PropTypes.number, episode: PropTypes.number }),
++    playerType: PropTypes.string,
++};
++module.exports = QuickPlay;
+diff --git a/src/routes/MetaDetails/QuickPlay/styles.less b/src/routes/MetaDetails/QuickPlay/styles.less
+new file mode 100644
+index 00000000..e34d8a20
+--- /dev/null
++++ b/src/routes/MetaDetails/QuickPlay/styles.less
+@@ -0,0 +1,11 @@
++.quickplay {
++    display: flex;
++    flex-wrap: wrap;
++    gap: .7em 1em;
++    padding: .75em 1em;
++    color: var(--primary-foreground-color);
++    font-size: .9rem;
++    label { display: inline-flex; align-items: center; gap: .35em; }
++    select { color: black; }
++    span { flex-basis: 100%; }
++}
+diff --git a/src/routes/MetaDetails/StreamsList/StreamsList.js b/src/routes/MetaDetails/StreamsList/StreamsList.js
+index b5d5b045..9523ebfd 100644
+--- a/src/routes/MetaDetails/StreamsList/StreamsList.js
++++ b/src/routes/MetaDetails/StreamsList/StreamsList.js
+@@ -14,10 +14,11 @@ const Stream = require('./Stream');
+ const styles = require('./styles');
+ const { usePlatform, useProfile } = require('stremio/common');
+ const { default: SeasonEpisodePicker } = require('../EpisodePicker');
++const QuickPlay = require('../QuickPlay/QuickPlay');
+ 
+ const ALL_ADDONS_KEY = 'ALL';
+ 
+-const StreamsList = ({ className, video, type, externalPlayerCallbackCanMarkWatched, onEpisodeSearch, ...props }) => {
++const StreamsList = ({ className, video, type, requestId, externalPlayerCallbackCanMarkWatched, onEpisodeSearch, ...props }) => {
+     const { t } = useTranslation();
+     const core = useCore();
+     const platform = usePlatform();
+@@ -111,6 +112,7 @@ const StreamsList = ({ className, video, type, externalPlayerCallbackCanMarkWatc
+ 
+     return (
+         <div className={classnames(className, styles['streams-list-container'])}>
++            {process.env.FAMILY_QUICKPLAY === 'true' ? <QuickPlay streams={props.streams} requestId={requestId} video={video} playerType={profile.settings.playerType} /> : null}
+             <div className={styles['select-choices-wrapper']}>
+                 {
+                     video ?
+@@ -228,6 +230,7 @@ StreamsList.propTypes = {
+     className: PropTypes.string,
+     streams: PropTypes.arrayOf(PropTypes.object).isRequired,
+     video: PropTypes.object,
++    requestId: PropTypes.string,
+     type: PropTypes.string,
+     externalPlayerCallbackCanMarkWatched: PropTypes.bool,
+     onEpisodeSearch: PropTypes.func
+diff --git a/src/routes/Player/Player.js b/src/routes/Player/Player.js
+index 651c607c..010d1557 100644
+--- a/src/routes/Player/Player.js
++++ b/src/routes/Player/Player.js
+@@ -1,7 +1,7 @@
+ // Copyright (C) 2017-2023 Smart code 203358507
+ 
+ const React = require('react');
+-const { useParams, useNavigate } = require('react-router');
++const { useParams, useNavigate, useLocation } = require('react-router');
+ const { useSearchParams } = require('react-router-dom');
+ const classnames = require('classnames');
+ const debounce = require('lodash.debounce');
+@@ -41,6 +41,7 @@ const styles = require('./styles');
+ const Video = require('./Video');
+ const { default: Indicator } = require('./Indicator/Indicator');
+ const { default: useMediaSession } = require('./useMediaSession');
++const { session: quickPlaySession, nextOnError } = require('stremio/family/quickplay/session');
+ 
+ const GAMEPAD_HANDLER_ID = 'player';
+ 
+@@ -58,6 +59,8 @@ const Player = () => {
+     }), [stream, streamTransportUrl, metaTransportUrl, type, id, videoId]);
+     const [queryParams] = useSearchParams();
+     const navigate = useNavigate();
++    const location = useLocation();
++    const currentQuickPlayPath = location.pathname + location.search;
+     const goBack = useGoBack();
+     const { t } = useTranslation();
+     const services = useServices();
+@@ -263,6 +266,12 @@ const Player = () => {
+     const onError = React.useCallback((error) => {
+         console.error('Player', error);
+         if (error.critical) {
++            const next = process.env.FAMILY_QUICKPLAY === 'true' ? nextOnError(quickPlaySession, currentQuickPlayPath, error) : null;
++            if (next) {
++                setError(null);
++                navigate(next, { replace: true });
++                return;
++            }
+             setError(error);
+         } else {
+             toast.show({
+@@ -272,7 +281,7 @@ const Player = () => {
+                 timeout: 3000
+             });
+         }
+-    }, []);
++    }, [currentQuickPlayPath, navigate]);
+ 
+     const onPlayRequested = React.useCallback(() => {
+         setSeeking(false);
+@@ -933,7 +942,7 @@ const Player = () => {
+             video.events.off('error', onError);
+             video.events.off('ended', onEnded);
+         };
+-    }, [onEnded]);
++    }, [onEnded, onError]);
+ 
+     React.useLayoutEffect(() => {
+         return () => {
+@@ -950,6 +959,8 @@ const Player = () => {
+             onMouseMove={onContainerMouseMove}
+             onMouseOver={onContainerMouseMove}
+             onMouseLeave={onContainerMouseLeave}>
++            {process.env.FAMILY_QUICKPLAY === 'true' && quickPlaySession.source(currentQuickPlayPath) ?
++                <button className={styles['quickplay-change-source']} onClick={() => navigate(quickPlaySession.source(currentQuickPlayPath), { replace: true })}>{t('FAMILY_QUICKPLAY_CHANGE_SOURCE', { defaultValue: 'Changer de source' })}</button> : null}
+             <Video
+                 ref={video.containerRef}
+                 className={styles['layer']}
+diff --git a/src/routes/Player/styles.less b/src/routes/Player/styles.less
+index 2df8c6c5..d2b2ff76 100644
+--- a/src/routes/Player/styles.less
++++ b/src/routes/Player/styles.less
+@@ -33,6 +33,15 @@ html:not(.active-slider-within) {
+     height: 100%;
+     background-color: @background-color;
+ 
++    .quickplay-change-source {
++        position: absolute;
++        right: 1.25rem;
++        top: 5rem;
++        z-index: 10;
++        padding: .6rem 1rem;
++        cursor: pointer;
++    }
++
+     .layer {
+         position: absolute;
+         top: 0;
+diff --git a/webpack.config.js b/webpack.config.js
+index 992e0ff6..6f1ff940 100644
+--- a/webpack.config.js
++++ b/webpack.config.js
+@@ -218,6 +218,7 @@ module.exports = (env, argv) => ({
+         new webpack.ProgressPlugin(),
+         new webpack.EnvironmentPlugin({
+             SENTRY_DSN: null,
++            FAMILY_QUICKPLAY: false,
+             ...env,
+             SERVICE_WORKER_DISABLED: false,
+             DEBUG: argv.mode !== 'production',
